@@ -1,6 +1,6 @@
 {
   "name": "sequelize-typescript-migration",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.1-beta.2",
   "description": "migration tool for sequelize & typescript users",
   "keywords": [
     "sequelize",
@@ -18,7 +18,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "practice": "node dist/practice.js"
+    "practice": "ts-node -T -r tsconfig-paths/register src/practice.ts"
   },
   "bin": "./dist/index.js",
   "repository": {
@@ -47,6 +47,7 @@
     "@types/inflection": "^1.5.28",
     "@types/js-beautify": "^1.8.2",
     "@types/node": "^13.11.0",
+    "ts-node": "^8.8.2",
     "tsconfig-paths": "^3.9.0"
   }
 }

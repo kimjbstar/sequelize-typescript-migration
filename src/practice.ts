@@ -1,6 +1,7 @@
 import { SequelizeTypescriptMigration } from "./index";
 import { Sequelize } from "sequelize-typescript";
 import { Table, Column, Model, Default, DataType } from "sequelize-typescript";
+import * as path from "path";
 
 @Table
 export class CarBrand extends Model<CarBrand> {
@@ -30,9 +31,15 @@ const bootstrap = async () => {
     dialect: "mysql",
     models: [CarBrand],
     timezone: "+09:00",
+    logging: false,
   });
-  await SequelizeTypescriptMigration.makeMigration(sequelize, {
-    outDir: "./migrations",
-  });
+  try {
+    const result = await SequelizeTypescriptMigration.makeMigration(sequelize, {
+      outDir: path.join(__dirname, "../migrations"),
+    });
+    console.log(result);
+  } catch (e) {
+    console.log(e);
+  }
 };
 bootstrap();

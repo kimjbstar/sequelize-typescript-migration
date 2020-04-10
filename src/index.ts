@@ -1,5 +1,6 @@
 import { Sequelize } from "sequelize-typescript";
 import * as beautify from "js-beautify";
+import * as fs from "fs";
 import { IMigrationState } from "./constants";
 import { ModelCtor, Model, QueryInterface } from "sequelize/types";
 import getTablesFromModels from "./utils/getTablesFromModels";
@@ -39,10 +40,17 @@ export class SequelizeTypescriptMigration {
     sequelize: Sequelize,
     options: IMigrationOptions
   ) => {
+    options.preview = options.preview || true;
+    if (fs.existsSync(options.outDir) === false) {
+      return Promise.reject({
+        msg: `${options.outDir} not exists. check path and if you did 'npx sequelize init' you must use path used in sequelize migration path`,
+      });
+    }
+    await sequelize.authenticate();
+
     const models: {
       [key: string]: ModelCtor<Model>;
     } = sequelize.models;
-    await sequelize.authenticate();
 
     const queryInterface: QueryInterface = sequelize.getQueryInterface();
 
@@ -92,7 +100,7 @@ export class SequelizeTypescriptMigration {
       console.log(
         beautify(`[ \n${migration.commandsDown.join(", \n")} \n];\n`)
       );
-      return 1;
+      return Promise.resolve({ msg: "success without save" });
     }
 
     const info = await writeMigration(
@@ -125,11 +133,11 @@ export class SequelizeTypescriptMigration {
         info.info.name
       }.js ${`--migrations-path=${options.outDir}`} `);
       // ${options.modelsPath ? `--models-path=${options.modelsPath}` : ""}
-      return 0;
+      return Promise.resolve({ msg: "success" });
     } catch (err) {
       if (options.debug) console.error(err);
     }
 
-    return 1;
+    return Promise.resolve({ msg: "success anyway.." });
   };
 }
