@@ -1,4 +1,6 @@
-# sequelize-typescript-migration
+not ready yet
+
+<!-- # sequelize-typescript-migration
 
 this scans models and its decorators and find changes. and generates migration up, down function like "makemigration" in django framework.
 this is based on [sequelize-typescript](https://www.npmjs.com/package/sequelize-typescript)
@@ -13,6 +15,7 @@ npm i -S sequelize-typescript-migration
 
 ```typescript
 import { Sequelize } from "sequelize-typescript";
+import { SequelizeTypescriptMigration } from "sequelize-typescript-migration";
 
 const sequelize: Sequelize = new Sequelize({
 	// .. options
@@ -29,4 +32,4 @@ after generate successfully, you can use [migrate](https://sequelize.org/master/
 
 ## Documentation
 
-not ready yet.
+not ready yet. -->
