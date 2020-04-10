@@ -25,8 +25,7 @@ await SequelizeTypescriptMigration.makeMigration(sequelize, {
 });
 ```
 
-after generate successfully, you can use "migrate" in [Sequelize](https://sequelize.org/)
-[Sequelize Migration Manual](https://sequelize.org/master/manual/migrations.html)
+after generate successfully, you can use [migrate](https://sequelize.org/master/manual/migrations.html) in [Sequelize](https://sequelize.org/)
 
 ## Documentation
 
