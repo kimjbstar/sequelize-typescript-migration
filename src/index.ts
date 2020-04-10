@@ -9,16 +9,32 @@ import createMigrationTable from "./utils/createMigrationTable";
 import getLastMigrationState from "./utils/getLastMigrationState";
 import writeMigration from "./utils/writeMigration";
 
-interface IMigrationOptions {
+export interface IMigrationOptions {
+  /**
+   * directory where migration file generates.
+   */
   outDir: string;
-  modelsPath?: string;
-  preview: boolean;
+  /**
+   * if false, it doesn't generate files but just prints result action.
+   */
+  preview?: boolean;
+  /**
+   * migration file name, default is "noname"
+   */
   migrationName?: string;
+  /**
+   * comment of migration.
+   */
   comment?: string;
   debug?: boolean;
 }
 
 export class SequelizeTypescriptMigration {
+  /**
+   * generates migration file including up, down code
+   * @param sequelize sequelize-typescript instance
+   * @param options options used for makeMigration
+   */
   public static makeMigration = async (
     sequelize: Sequelize,
     options: IMigrationOptions
@@ -107,9 +123,8 @@ export class SequelizeTypescriptMigration {
       console.log(`Use sequelize CLI:
   npx sequelize db:migrate --to ${info.revisionNumber}-${
         info.info.name
-      }.js ${`--migrations-path=${options.outDir}`} ${
-        options.modelsPath ? `--models-path=${options.modelsPath}` : ""
-      }`);
+      }.js ${`--migrations-path=${options.outDir}`} `);
+      // ${options.modelsPath ? `--models-path=${options.modelsPath}` : ""}
       return 0;
     } catch (err) {
       if (options.debug) console.error(err);

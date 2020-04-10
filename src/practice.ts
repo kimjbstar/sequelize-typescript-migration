@@ -33,7 +33,6 @@ const bootstrap = async () => {
   });
   await SequelizeTypescriptMigration.makeMigration(sequelize, {
     outDir: "./migrations",
-    preview: true,
   });
 };
 bootstrap();
