@@ -1,7 +1,8 @@
 # sequelize-typescript-migration
 
 It is based on [sequelize-typescript](https://www.npmjs.com/package/sequelize-typescript), not supports "sequelize" based model codes.
-and you need prior knowledge of migration of Sequelize
+and you need prior knowledge of migration of Sequelize.
+
 [Sequelize Migration Manual](https://sequelize.org/master/manual/migrations.html)
 
 This scans models and its decorators to find changes, and generates migration code with this changes so don't need to write up, down function manually. this is like "makemigration" in django framework.
@@ -9,9 +10,10 @@ This scans models and its decorators to find changes, and generates migration co
 After generate successfully, you can use "migrate" in [Sequelize](https://sequelize.org/)
 [Sequelize Migration Manual](https://sequelize.org/master/manual/migrations.html)
 
-**This refers to [GitHub - flexxnn/sequelize-auto-migrations: Migration generator && runner for sequelize](https://github.com/flexxnn/sequelize-auto-migrations) and modified to typescript.**
+**This refers to [GitHub - flexxnn/sequelize-auto-migrations: Migration generator && runner for sequelize](https://github.com/flexxnn/sequelize-auto-migrations) and its forks, and modified to typescript.**
 
 Sometimes, undo(down) action may not work, then you should modify manually. Maybe it's because of ordering of relations of models.
+That issue is currently in the works.
 
 ## Installation
 
@@ -36,7 +38,7 @@ await SequelizeTypescriptMigration.makeMigration(sequelize, {
 });
 ```
 
-let's see example, if you have this twomodels and run first makeMigration, it detect all table change from nothing.
+let's see example, if you have this two models and run first makeMigration, it detects all table change from nothing.
 
 ```typescript
 @Table
