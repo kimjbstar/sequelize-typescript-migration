@@ -12,11 +12,11 @@ import writeMigration from "./utils/writeMigration";
 
 export interface IMigrationOptions {
   /**
-   * directory where migration file generates.
+   * directory where migration file saved. We recommend that you specify this path to sequelize migration path.
    */
   outDir: string;
   /**
-   * if false, it doesn't generate files but just prints result action.
+   * if true, it doesn't generate files but just prints result action.
    */
   preview?: boolean;
   /**
@@ -33,14 +33,15 @@ export interface IMigrationOptions {
 export class SequelizeTypescriptMigration {
   /**
    * generates migration file including up, down code
+   * after this, run 'npx sequelize-cli db:migrate'.
    * @param sequelize sequelize-typescript instance
-   * @param options options used for makeMigration
+   * @param options options
    */
   public static makeMigration = async (
     sequelize: Sequelize,
     options: IMigrationOptions
   ) => {
-    options.preview = options.preview || true;
+    options.preview = options.preview || false;
     if (fs.existsSync(options.outDir) === false) {
       return Promise.reject({
         msg: `${options.outDir} not exists. check path and if you did 'npx sequelize init' you must use path used in sequelize migration path`,
@@ -132,7 +133,7 @@ export class SequelizeTypescriptMigration {
   npx sequelize db:migrate --to ${info.revisionNumber}-${
         info.info.name
       }.js ${`--migrations-path=${options.outDir}`} `);
-      // ${options.modelsPath ? `--models-path=${options.modelsPath}` : ""}
+
       return Promise.resolve({ msg: "success" });
     } catch (err) {
       if (options.debug) console.error(err);

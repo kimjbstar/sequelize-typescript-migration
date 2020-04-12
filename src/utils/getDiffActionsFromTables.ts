@@ -35,7 +35,7 @@ export default function getDiffActionsFromTables(
               tableName,
               attributes: df.rhs.schema,
               options: {},
-              depends
+              depends,
             });
 
             // create indexes
@@ -47,7 +47,7 @@ export default function getDiffActionsFromTables(
                     {
                       actionType: "addIndex",
                       tableName,
-                      depends: [tableName]
+                      depends: [tableName],
                     },
                     copied
                   )
@@ -73,7 +73,7 @@ export default function getDiffActionsFromTables(
                 tableName,
                 attributeName: df.path[2],
                 options: df.rhs,
-                depends
+                depends,
               });
               break;
             }
@@ -93,7 +93,7 @@ export default function getDiffActionsFromTables(
                   tableName,
                   attributeName: df.path[2],
                   options,
-                  depends
+                  depends,
                 });
                 break;
               }
@@ -137,7 +137,7 @@ export default function getDiffActionsFromTables(
                 actionType: "removeColumn",
                 tableName,
                 columnName: df.path[2],
-                depends: [tableName]
+                depends: [tableName],
               });
               break;
             }
@@ -155,7 +155,7 @@ export default function getDiffActionsFromTables(
                 tableName,
                 attributeName: df.path[2],
                 options,
-                depends
+                depends,
               });
               break;
             }
@@ -168,7 +168,7 @@ export default function getDiffActionsFromTables(
               tableName,
               fields: df.lhs.fields,
               options: df.lhs.options,
-              depends: [tableName]
+              depends: [tableName],
             });
             break;
           }
@@ -193,7 +193,7 @@ export default function getDiffActionsFromTables(
               tableName,
               attributeName: df.path[2],
               options,
-              depends
+              depends,
             });
           }
         }

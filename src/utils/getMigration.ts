@@ -1,7 +1,7 @@
 export default function getMigration(actions) {
   const commandsUp = [];
   const commandsDown = [];
-  const consoleOut = [];
+  const consoleOut: string[] = [];
 
   for (const _i in actions) {
     const action = actions[_i];

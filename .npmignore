@@ -1,1 +1,16 @@
 src/
+
+.git/
+
+node_modules/
+
+typings
+.tscache
+
+test/
+
+example/
+.gitignore
+.editorconfig
+
+npm-debug.log
