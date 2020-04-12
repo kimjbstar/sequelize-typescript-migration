@@ -1,4 +1,6 @@
-export default function sortActions(actions) {
+import { IAction } from "./getDiffActionsFromTables";
+
+export default function sortActions(actions: IAction[]) {
   const orderedActionTypes: string[] = [
     "removeIndex",
     "removeColumn",
@@ -9,56 +11,55 @@ export default function sortActions(actions) {
     "addIndex",
   ];
 
-  actions.sort((a, b) => {
-    if (
-      orderedActionTypes.indexOf(a.actionType) <
-      orderedActionTypes.indexOf(b.actionType)
-    ) {
+  const sortByLengthExists = (left: any[], right: any[]) => {
+    if (left.length === 0 && right.length > 0) {
       return -1;
-    }
-    if (
-      orderedActionTypes.indexOf(a.actionType) >
-      orderedActionTypes.indexOf(b.actionType)
-    ) {
+    } // left < right
+    if (right.length === 0 && left.length > 0) {
       return 1;
-    }
-
-    if (a.depends.length === 0 && b.depends.length > 0) {
-      return -1;
-    } // a < b
-    if (b.depends.length === 0 && a.depends.length > 0) {
-      return 1;
-    } // b < a
+    } // right < left
 
     return 0;
+  };
+
+  actions.sort((left: IAction, right: IAction) => {
+    if (
+      orderedActionTypes.indexOf(left.actionType) <
+      orderedActionTypes.indexOf(right.actionType)
+    ) {
+      return -1;
+    }
+    if (
+      orderedActionTypes.indexOf(left.actionType) >
+      orderedActionTypes.indexOf(right.actionType)
+    ) {
+      return 1;
+    }
+
+    if (left.actionType === "dropTable" && right.actionType === "dropTable") {
+      return sortByLengthExists(right.depends, left.depends);
+    }
+    return sortByLengthExists(left.depends, right.depends);
   });
 
-  for (let k = 0; k <= actions.length; k++) {
-    for (let i = 0; i < actions.length; i++) {
-      if (!actions[i].depends) {
+  for (let i = 0; i < actions.length; i++) {
+    const leftAction: IAction = actions[i];
+    if (leftAction.depends.length === 0) {
+      continue;
+    }
+
+    for (let j = 0; j < actions.length; j++) {
+      const rightAction: IAction = actions[j];
+      if (rightAction.depends.length === 0) {
         continue;
       }
-      if (actions[i].depends.length === 0) {
+
+      if (leftAction.actionType != rightAction.actionType) {
         continue;
       }
 
-      const a = actions[i];
-
-      for (let j = 0; j < actions.length; j++) {
-        if (!actions[j].depends) {
-          continue;
-        }
-        if (actions[j].depends.length === 0) {
-          continue;
-        }
-
-        const b = actions[j];
-
-        if (a.actionType != b.actionType) {
-          continue;
-        }
-
-        if (b.depends.indexOf(a.tableName) !== -1 && i > j) {
+      if (rightAction.depends.indexOf(leftAction.tableName) !== -1) {
+        if (i > j) {
           const c = actions[i];
           actions[i] = actions[j];
           actions[j] = c;
@@ -66,4 +67,5 @@ export default function sortActions(actions) {
       }
     }
   }
+  return actions;
 }

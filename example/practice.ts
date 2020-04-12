@@ -1,26 +1,8 @@
-import { SequelizeTypescriptMigration } from "./index";
+import { SequelizeTypescriptMigration } from "../../sequelize-typescript-migration";
 import { Sequelize } from "sequelize-typescript";
-import { Table, Column, Model, Default, DataType } from "sequelize-typescript";
 import * as path from "path";
-
-@Table
-export class CarBrand extends Model<CarBrand> {
-  @Column
-  name: string;
-
-  @Default(true)
-  @Column(DataType.BOOLEAN)
-  isCertified: boolean;
-
-  @Column
-  imgUrl: string;
-
-  @Column
-  orderNo: number;
-
-  @Column
-  carsCount: number;
-}
+import { Car } from "models/car.model";
+import { CarBrand } from "models/car_brand.model";
 
 const bootstrap = async () => {
   const sequelize: Sequelize = new Sequelize({
@@ -29,13 +11,13 @@ const bootstrap = async () => {
     database: "test_migration2",
     host: "localhost",
     dialect: "mysql",
-    models: [CarBrand],
+    models: [CarBrand, Car],
     timezone: "+09:00",
     logging: false,
   });
   try {
     const result = await SequelizeTypescriptMigration.makeMigration(sequelize, {
-      outDir: path.join(__dirname, "../migrations"),
+      outDir: path.join(__dirname, "./migrations"),
     });
     console.log(result);
   } catch (e) {

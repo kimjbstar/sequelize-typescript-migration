@@ -1,11 +1,29 @@
 import { diff, Diff } from "deep-diff";
 import sortActions from "./sortActions";
 
+export interface IAction {
+  actionType:
+    | "createTable"
+    | "addIndex"
+    | "addColumn"
+    | "dropTable"
+    | "removeColumn"
+    | "removeIndex"
+    | "changeColumn";
+  tableName: string;
+  attributes?: any;
+  attributeName?: any;
+  options?: any;
+  columnName?: any;
+  fields?: any[];
+  depends: string[];
+}
+
 export default function getDiffActionsFromTables(
   previousStateTables,
   currentStateTables
 ) {
-  const actions = [];
+  const actions: IAction[] = [];
   let difference: Array<Diff<any, any>> = diff(
     previousStateTables,
     currentStateTables
@@ -35,7 +53,7 @@ export default function getDiffActionsFromTables(
               tableName,
               attributes: df.rhs.schema,
               options: {},
-              depends,
+              depends: depends,
             });
 
             // create indexes
@@ -67,13 +85,12 @@ export default function getDiffActionsFromTables(
               if (df.rhs && df.rhs.references) {
                 depends.push(df.rhs.references.model);
               }
-
               actions.push({
                 actionType: "addColumn",
-                tableName,
+                tableName: tableName,
                 attributeName: df.path[2],
                 options: df.rhs,
-                depends,
+                depends: depends,
               });
               break;
             }
@@ -90,10 +107,10 @@ export default function getDiffActionsFromTables(
 
                 actions.push({
                   actionType: "changeColumn",
-                  tableName,
+                  tableName: tableName,
                   attributeName: df.path[2],
-                  options,
-                  depends,
+                  options: options,
+                  depends: depends,
                 });
                 break;
               }
@@ -121,11 +138,21 @@ export default function getDiffActionsFromTables(
       case "D":
         {
           const tableName = df.path[0];
-          const depends = [tableName];
 
           if (df.path.length === 1) {
             // drop table
-            actions.push({ actionType: "dropTable", tableName, depends: [] });
+            const depends: string[] = [];
+            Object.values(df.lhs.schema).forEach((v: any) => {
+              if (v.references) {
+                depends.push(v.references.model);
+              }
+            });
+
+            actions.push({
+              actionType: "dropTable",
+              tableName: tableName,
+              depends: depends,
+            });
             break;
           }
 
@@ -144,10 +171,11 @@ export default function getDiffActionsFromTables(
 
             // if (df.path.length > 3) - drop attribute from column (change col)
             if (df.path.length > 3) {
+              const depends = [tableName];
               // new field attributes
               const options = currentStateTables[tableName].schema[df.path[2]];
               if (options.references) {
-                depends.push(options.references.nodel);
+                depends.push(options.references.model);
               }
 
               actions.push({
@@ -162,7 +190,6 @@ export default function getDiffActionsFromTables(
           }
 
           if (df.path[1] === "indexes") {
-            //                   console.log(df)
             actions.push({
               actionType: "removeIndex",
               tableName,
@@ -215,6 +242,6 @@ export default function getDiffActionsFromTables(
         break;
     }
   });
-  sortActions(actions);
-  return actions;
+  const result = sortActions(actions);
+  return result;
 }
