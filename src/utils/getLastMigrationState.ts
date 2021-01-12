@@ -9,7 +9,7 @@ export default async function getLastMigrationState(sequelize: Sequelize) {
 
   const lastRevision: number =
     lastExecutedMigration !== undefined
-      ? lastExecutedMigration["name"].split("-")[0]
+      ? parseInt(lastExecutedMigration["name"].split("-")[0])
       : -1;
 
   const [

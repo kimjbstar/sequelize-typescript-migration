@@ -2,31 +2,96 @@ import * as beautify from "js-beautify";
 import * as fs from "fs";
 import * as path from "path";
 import removeCurrentRevisionMigrations from "./removeCurrentRevisionMigrations";
-export default async function writeMigration(revision, migration, options) {
-  await removeCurrentRevisionMigrations(revision, options.outDir, options);
 
-  const name = options.migrationName || "noname";
-  const comment = options.comment || "";
-  let commands = `var migrationCommands = [ \n${migration.commandsUp.join(
-    ", \n"
-  )} \n];\n`;
-  let commandsDown = `var rollbackCommands = [ \n${migration.commandsDown.join(
-    ", \n"
-  )} \n];\n`;
+export default async function writeMigration(currentState, migration, options) {
+    await removeCurrentRevisionMigrations(currentState.revision, options.outDir, options);
 
-  const actions = ` * ${migration.consoleOut.join("\n * ")}`;
+    const name = options.migrationName || "noname";
+    const comment = options.comment || "";
 
-  commands = beautify(commands);
-  commandsDown = beautify(commandsDown);
 
-  const info = {
-    revision,
-    name,
-    created: new Date(),
-    comment,
-  };
+    let myState = JSON.stringify(currentState);
+    const searchRegExp = /'/g;
+    const replaceWith = "\\'";
+    myState = myState.replace(searchRegExp, replaceWith);
 
-  const template = `'use strict';
+    const versionCommands = `
+      {
+        fn: "createTable",
+        params: [
+          "SequelizeMetaMigrations",
+          {
+            "revision": {
+              "primaryKey": true,
+              "type": Sequelize.UUID
+            },
+            "name": {
+              "allowNull": false,
+              "type": Sequelize.STRING
+            },
+            "state": {
+              "allowNull": false,
+              "type": Sequelize.JSON
+            },
+          },
+          {}
+        ]
+      },
+       {
+        fn: "bulkDelete",
+        params: [
+          "SequelizeMetaMigrations",
+          [{
+            revision: info.revision
+          }],
+          {}
+        ]
+      },
+      {
+        fn: "bulkInsert",
+        params: [
+          "SequelizeMetaMigrations",
+          [{
+            revision: info.revision,
+            name: info.name,
+            state: '${myState}'
+          }],
+          {}
+        ]
+      },
+    `
+
+    const versionDownCommands = `
+    {
+      fn: "bulkDelete",
+      params: [
+        "SequelizeMetaMigrations",
+        [{
+          revision: info.revision,
+        }],
+        {}
+      ]
+    },
+ `;
+
+
+    let commands = `var migrationCommands = [\n${versionCommands}\n\n \n${migration.commandsUp.join(", \n")} \n];\n`;
+    let commandsDown = `var rollbackCommands = [\n${versionDownCommands}\n\n \n${migration.commandsDown.join(", \n")} \n];\n`;
+
+
+    const actions = ` * ${migration.consoleOut.join("\n * ")}`;
+
+    commands = beautify(commands);
+    commandsDown = beautify(commandsDown);
+
+    const info = {
+        revision: currentState.revision,
+        name,
+        created: new Date(),
+        comment,
+    };
+
+    const template = `'use strict';
 
 var Sequelize = require('sequelize');
 
@@ -85,16 +150,16 @@ module.exports = {
 };
 `;
 
-  const revisionNumber = revision.toString().padStart(8, "0");
+    const revisionNumber = currentState.revision.toString().padStart(8, "0");
 
-  const filename = path.join(
-    options.outDir,
-    `${
-      revisionNumber + (name !== "" ? `-${name.replace(/[\s-]/g, "_")}` : "")
-    }.js`
-  );
+    const filename = path.join(
+        options.outDir,
+        `${
+            revisionNumber + (name !== "" ? `-${name.replace(/[\s-]/g, "_")}` : "")
+        }.js`
+    );
 
-  fs.writeFileSync(filename, template);
+    fs.writeFileSync(filename, template);
 
-  return { filename, info, revisionNumber };
+    return {filename, info, revisionNumber};
 }

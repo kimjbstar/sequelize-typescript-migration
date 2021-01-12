@@ -105,7 +105,7 @@ export class SequelizeTypescriptMigration {
     }
 
     const info = await writeMigration(
-      currentState.revision,
+      currentState,
       migration,
       options
     );
