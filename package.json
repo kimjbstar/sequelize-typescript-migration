@@ -11,7 +11,7 @@
   ],
   "homepage": "https://github.com/syon-development/sequelize-typescript-migration",
   "bugs": {
-    "url": "https://github.com/syon-development/sequelize-typescript-migrationissues",
+    "url": "https://github.com/syon-development/sequelize-typescript-migration/issues",
     "email": "thomas.kugi@syon.at"
   },
   "main": "dist/index.js",
@@ -22,7 +22,7 @@
   "bin": "./dist/index.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/kimjbstar/sequelize-typescript-migration.git"
+    "url": "git://github.com/syon-development/sequelize-typescript-migration"
   },
   "author": {
     "name": "Thomas Kugi",
