@@ -1,6 +1,6 @@
 {
   "name": "sequelize-typescript-migration-v2",
-  "version": "0.0.2-beta.3",
+  "version": "0.0.2-beta.4",
   "description": "migration tool for sequelize & typescript users",
   "keywords": [
     "sequelize",
@@ -17,6 +17,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "prepare": "tsc",
     "start": "node dist/index.js"
   },
   "bin": "./dist/index.js",
