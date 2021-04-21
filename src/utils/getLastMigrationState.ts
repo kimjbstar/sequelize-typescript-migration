@@ -15,7 +15,7 @@ export default async function getLastMigrationState(sequelize: Sequelize) {
   const [
     lastMigration,
   ] = await sequelize.query(
-    `SELECT state FROM SequelizeMetaMigrations where revision = '${lastRevision}'`,
+    `SELECT state FROM "SequelizeMetaMigrations" where revision = '${lastRevision}'`,
     { type: "SELECT" }
   );
   return lastMigration ? lastMigration["state"] : undefined;
