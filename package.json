@@ -1,6 +1,6 @@
 {
-  "name": "sequelize-typescript-migration",
-  "version": "0.0.1-beta.3",
+  "name": "sequelize-typescript-migration-v2",
+  "version": "0.0.2-beta.4",
   "description": "migration tool for sequelize & typescript users",
   "keywords": [
     "sequelize",
@@ -9,24 +9,25 @@
     "migration",
     "makemigration"
   ],
-  "homepage": "https://github.com/kimjbstar/sequelize-typescript-migration",
+  "homepage": "https://github.com/syon-development/sequelize-typescript-migration",
   "bugs": {
-    "url": "https://github.com/kimjbstar/sequelize-typescript-migration/issues",
-    "email": "kimjbstar@gmail.com"
+    "url": "https://github.com/syon-development/sequelize-typescript-migration/issues",
+    "email": "thomas.kugi@syon.at"
   },
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "prepare": "tsc",
     "start": "node dist/index.js"
   },
   "bin": "./dist/index.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/kimjbstar/sequelize-typescript-migration.git"
+    "url": "git://github.com/syon-development/sequelize-typescript-migration"
   },
   "author": {
-    "name": "kimjbstar",
-    "email": "kimjbstar@gmail.com"
+    "name": "Thomas Kugi",
+    "email": "thomas.kugi@syon.at"
   },
   "license": "MIT",
   "dependencies": {
