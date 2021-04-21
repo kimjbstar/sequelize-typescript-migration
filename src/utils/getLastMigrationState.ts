@@ -3,7 +3,7 @@ export default async function getLastMigrationState(sequelize: Sequelize) {
   const [
     lastExecutedMigration,
   ] = await sequelize.query(
-    "SELECT name FROM SequelizeMeta ORDER BY name desc limit 1",
+    `SELECT name FROM "SequelizeMeta" ORDER BY name desc limit 1`,
     { type: "SELECT" }
   );
 
