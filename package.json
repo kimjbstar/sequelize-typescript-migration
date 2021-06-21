@@ -1,33 +1,36 @@
 {
-  "name": "sequelize-typescript-migration",
-  "version": "0.0.1-beta.3",
+  "name": "@wuerdevoll/sequelize-typescript-migration",
+  "version": "0.0.1-beta.4",
   "description": "migration tool for sequelize & typescript users",
   "keywords": [
     "sequelize",
     "typescript",
     "migrate",
     "migration",
-    "makemigration"
+    "makemigration",
+    "diff",
+    "compare",
+    "detect",
+    "changes"
   ],
-  "homepage": "https://github.com/kimjbstar/sequelize-typescript-migration",
+  "homepage": "https://github.com/mricharz/sequelize-typescript-migration",
   "bugs": {
-    "url": "https://github.com/kimjbstar/sequelize-typescript-migration/issues",
-    "email": "kimjbstar@gmail.com"
+    "url": "https://github.com/mricharz/sequelize-typescript-migration/issues",
+    "email": "support@wuerdevoll.tv"
   },
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js"
   },
-  "bin": "./dist/index.js",
+  "bin": {
+    "sequelize-typescript-migration": "dist/index.js"
+  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/kimjbstar/sequelize-typescript-migration.git"
+    "url": "git://github.com/mricharz/sequelize-typescript-migration.git"
   },
-  "author": {
-    "name": "kimjbstar",
-    "email": "kimjbstar@gmail.com"
-  },
+  "author": "wuerDEVoll <support@wuerdevoll.tv>",
   "license": "MIT",
   "dependencies": {
     "deep-diff": "^1.0.2",
@@ -51,5 +54,8 @@
   },
   "engines": {
     "node": ">=10"
+  },
+  "directories": {
+    "example": "example"
   }
 }
