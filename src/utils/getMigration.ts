@@ -1,6 +1,6 @@
 export default function getMigration(actions) {
-  const commandsUp = [];
-  const commandsDown = [];
+  const commandsUp: string[] = [];
+  const commandsDown: string[] = [];
   const consoleOut: string[] = [];
 
   for (const _i in actions) {
@@ -126,7 +126,7 @@ ${JSON.stringify(action.options)}
 }
 
 const propertyToStr = obj => {
-  const vals = [];
+  const vals:any[] = [];
   for (const k in obj) {
     if (k === "seqType") {
       vals.push(`"type": ${obj[k]}`);
@@ -160,7 +160,7 @@ const propertyToStr = obj => {
 };
 
 const getAttributes = attrs => {
-  const ret = [];
+  const ret:any[] = [];
   for (const attrName in attrs) {
     ret.push(`      "${attrName}": ${propertyToStr(attrs[attrName])}`);
   }

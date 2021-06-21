@@ -66,7 +66,7 @@ export default function reverseSequelizeColType(
   }
 
   if (attrType.constructor.name === "DECIMAL") {
-    const params = [];
+    const params:any[] = [];
 
     if (attrType.options.precision) {
       params.push(attrType.options.precision);
@@ -83,7 +83,7 @@ export default function reverseSequelizeColType(
       attrType.constructor.name
     ) >= 0
   ) {
-    const params = [];
+    const params:any[] = [];
 
     if (attrType.options.length) {
       params.push(attrType.options.length);

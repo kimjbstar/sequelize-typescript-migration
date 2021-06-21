@@ -1,6 +1,6 @@
-import * as beautify from "js-beautify";
-import * as fs from "fs";
-import * as path from "path";
+import beautify from "js-beautify";
+import fs from "fs";
+import path from "path";
 import removeCurrentRevisionMigrations from "./removeCurrentRevisionMigrations";
 export default async function writeMigration(revision, migration, options) {
   await removeCurrentRevisionMigrations(revision, options.outDir, options);

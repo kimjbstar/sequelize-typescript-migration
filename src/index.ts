@@ -1,6 +1,6 @@
 import { Sequelize } from "sequelize-typescript";
-import * as beautify from "js-beautify";
-import * as fs from "fs";
+import beautify from "js-beautify";
+import fs from "fs";
 import { IMigrationState } from "./constants";
 import { ModelCtor, Model, QueryInterface } from "sequelize/types";
 import getTablesFromModels from "./utils/getTablesFromModels";
@@ -67,7 +67,7 @@ export class SequelizeTypescriptMigration {
         lastMigrationState !== undefined ? lastMigrationState["tables"] : {},
     };
     const currentState: IMigrationState = {
-      revision: previousState.revision + 1,
+      revision: (previousState.revision || 0) + 1,
       tables: getTablesFromModels(sequelize, models),
     };
 
@@ -124,7 +124,9 @@ export class SequelizeTypescriptMigration {
     ];
 
     try {
+
       await queryInterface.bulkDelete("SequelizeMetaMigrations", {
+        // @ts-ignore
         revision: currentState.revision,
       });
       await queryInterface.bulkInsert("SequelizeMetaMigrations", rows);

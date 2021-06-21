@@ -24,7 +24,7 @@ export default function getDiffActionsFromTables(
   currentStateTables
 ) {
   const actions: IAction[] = [];
-  let difference: Array<Diff<any, any>> = diff(
+  let difference: Array<Diff<any, any>> | undefined = diff(
     previousStateTables,
     currentStateTables
   );
@@ -33,13 +33,14 @@ export default function getDiffActionsFromTables(
   }
 
   difference.forEach(df => {
+    if(!df.path) return;
     switch (df.kind) {
       // add new
       case "N":
         {
           // new table created
           if (df.path.length === 1) {
-            const depends = [];
+            const depends:any[] = [];
 
             const tableName = df.rhs.tableName;
             Object.values(df.rhs.schema).forEach((v: any) => {
