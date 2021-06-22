@@ -1,5 +1,10 @@
 # @wuerdevoll/sequelize-typescript-migration
 
+As the original creator of this package is not maintaining it anymore. I decided to create a fork and publish it in a scoped npm-package.
+Feel free to create PRs and let's maintain this project together.
+
+Thanks for all the initial work, [kimjbstar](https://github.com/kimjbstar/sequelize-typescript-migration)
+
 It is based on [sequelize-typescript](https://www.npmjs.com/package/sequelize-typescript), not supports "sequelize" based model codes.
 and you need prior knowledge of migration of Sequelize.
 
