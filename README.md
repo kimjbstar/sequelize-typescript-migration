@@ -18,14 +18,14 @@ That issue is currently in the works.
 ## Installation
 
 ```
-npm i -D sequelize-typescript-migration
+npm i -D @wuerdevoll/sequelize-typescript-migration
 ```
 
 ## Usage Example
 
 ```typescript
 import { Sequelize } from "sequelize-typescript";
-import { SequelizeTypescriptMigration } from "sequelize-typescript-migration";
+import { SequelizeTypescriptMigration } from "@wuerdevoll/sequelize-typescript-migration";
 
 const sequelize: Sequelize = new Sequelize({
 	// .. options
