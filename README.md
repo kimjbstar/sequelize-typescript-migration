@@ -38,7 +38,7 @@ const sequelize: Sequelize = new Sequelize({
 
 await SequelizeTypescriptMigration.makeMigration(sequelize, {
 	outDir: path.join(__dirname, "../migrations"),
-	migrationName: "add-awesome-field-in-my-table"
+	migrationName: "add-awesome-field-in-my-table",
 	preview: false,
 });
 ```
