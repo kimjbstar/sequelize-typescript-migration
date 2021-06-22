@@ -1,4 +1,4 @@
-# sequelize-typescript-migration
+# @wuerdevoll/sequelize-typescript-migration
 
 It is based on [sequelize-typescript](https://www.npmjs.com/package/sequelize-typescript), not supports "sequelize" based model codes.
 and you need prior knowledge of migration of Sequelize.
