@@ -2,7 +2,7 @@ import { Sequelize } from "sequelize-typescript";
 import beautify from "js-beautify";
 import fs from "fs";
 import { IMigrationState } from "./constants";
-import { ModelCtor, Model, QueryInterface } from "sequelize/types";
+import { Model, ModelCtor, QueryInterface } from "sequelize/types";
 import getTablesFromModels from "./utils/getTablesFromModels";
 import getDiffActionsFromTables from "./utils/getDiffActionsFromTables";
 import getMigration from "./utils/getMigration";
@@ -87,7 +87,7 @@ export class SequelizeTypescriptMigration {
 
     if (migration.commandsUp.length === 0) {
       console.log("No changes found");
-      process.exit(0);
+      return Promise.resolve({msg: "success: no changes found"});
     }
 
     // log
@@ -105,7 +105,7 @@ export class SequelizeTypescriptMigration {
     }
 
     const info = await writeMigration(
-      currentState.revision,
+      currentState,
       migration,
       options
     );

@@ -115,8 +115,12 @@ export default function reverseSequelizeColType(
     return `${prefix}DATEONLY`;
   }
 
+  if (attrType.constructor.name === "JSON") {
+    return `${prefix}JSON`;
+  }
+
   if (attrType.constructor.name === "BLOB") {
-    const postfix = `(${attrType.options.length.toLowerCase()})`;
+    const postfix = `'${attrType.options.length.toLowerCase()}'`;
     return `${prefix}BLOB(${postfix})`;
   }
 
@@ -171,6 +175,8 @@ export default function reverseSequelizeColType(
     "HSTORE",
     "JSON",
     "JSONB",
+    "JSONTYPE",
+    "DOUBLE",
     "NOW",
     "UUID",
     "UUIDV1",

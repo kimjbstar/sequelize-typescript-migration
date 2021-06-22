@@ -2,7 +2,9 @@ import beautify from "js-beautify";
 import fs from "fs";
 import path from "path";
 import removeCurrentRevisionMigrations from "./removeCurrentRevisionMigrations";
-export default async function writeMigration(revision, migration, options) {
+
+export default async function writeMigration(currentState, migration, options) {
+  const { revision } = currentState
   await removeCurrentRevisionMigrations(revision, options.outDir, options);
 
   const name = options.migrationName || "noname";
