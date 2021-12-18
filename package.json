@@ -1,6 +1,6 @@
 {
   "name": "sequelize-typescript-migration-fix",
-  "version": "0.0.1-beta.4",
+  "version": "0.0.1",
   "description": "migration tool for sequelize & typescript users fixed camel case",
   "keywords": [
     "sequelize",
