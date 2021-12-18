@@ -1,7 +1,7 @@
 {
-  "name": "sequelize-typescript-migration",
-  "version": "0.0.1-beta.3",
-  "description": "migration tool for sequelize & typescript users",
+  "name": "sequelize-typescript-migration-fix",
+  "version": "0.0.2",
+  "description": "migration tool for sequelize & typescript users fixed camel case",
   "keywords": [
     "sequelize",
     "typescript",
@@ -9,10 +9,10 @@
     "migration",
     "makemigration"
   ],
-  "homepage": "https://github.com/kimjbstar/sequelize-typescript-migration",
+  "homepage": "https://github.com/MMN3003/sequelize-typescript-migration",
   "bugs": {
-    "url": "https://github.com/kimjbstar/sequelize-typescript-migration/issues",
-    "email": "kimjbstar@gmail.com"
+    "url": "https://github.com/MMN3003/sequelize-typescript-migration/issues",
+    "email": "mohsenmalvandyniko@gmail.com"
   },
   "main": "dist/index.js",
   "scripts": {
@@ -22,11 +22,11 @@
   "bin": "./dist/index.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/kimjbstar/sequelize-typescript-migration.git"
+    "url": "git://github.com/MMN3003/sequelize-typescript-migration.git"
   },
   "author": {
-    "name": "kimjbstar",
-    "email": "kimjbstar@gmail.com"
+    "name": "mmn3003",
+    "email": "mohsenmalvandyniko@gmail.com"
   },
   "license": "MIT",
   "dependencies": {
