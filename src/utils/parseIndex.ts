@@ -27,7 +27,7 @@ export default function parseIndex(idx: IndexesOptions) {
 
   // @todo: UNIQUE|FULLTEXT|SPATIAL
   if (idx.unique) {
-    options["indicesType"] = "UNIQUE";
+    options["type"] = "UNIQUE";
   }
 
   // Set a type for the index, e.g. BTREE. See the documentation of the used dialect

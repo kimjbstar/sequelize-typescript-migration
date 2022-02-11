@@ -227,6 +227,18 @@ module.exports = {
 
 then you can apply this `npx sequelize db:migrate --to 00000001-noname.js`
 
+## Possible Usage Scenario
+Make sure to have writeMigration in your System under development and that sequelize is all set up
+
+If you change a model and re-run the backend there should be a new file under `db/migrations`, but the database
+won't update automatically. There are easy but important steps:
+1) Rename the file's name as well as the content (Info: name), so that everyone knows what this migration is about
+2) Migrate your database `sequelize db:migrate`
+3) Re-Serve the backend. You Should see 'No changes found'.
+4) Test the automatically created file's down function `sequelize db:migrate:undo`
+5) If there are any troubles, fix the auto-generated file (ordering!)
+6) Run `sequelize db:migrate:undo` and continue your amazing work
+
 ## Documentation
 
 not ready yet.

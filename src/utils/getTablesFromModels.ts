@@ -64,7 +64,7 @@ export default function reverseModels(
         "references",
         "onUpdate",
         "onDelete",
-        "validate",
+        //"validate",
       ].forEach(key => {
         if (attribute[key] !== undefined) {
           rowAttribute[key] = attribute[key];
