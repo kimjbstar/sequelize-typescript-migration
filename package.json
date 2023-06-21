@@ -41,7 +41,7 @@
     "typescript": "^3.8.3"
   },
   "devDependencies": {
-    "@types/bluebird": "^3.5.30",
+    "@types/bluebird": "3.5.5",
     "@types/deep-diff": "^1.0.0",
     "@types/inflection": "^1.5.28",
     "@types/js-beautify": "^1.8.2",
