@@ -50,6 +50,8 @@
     "@changesets/changelog-github": "^1.0.0",
     "@changesets/cli": "^3.0.1",
     "@eslint/js": "^9.39.0",
+    "@sequelize/core": "^7.0.0-alpha.48",
+    "@sequelize/sqlite3": "^7.0.0-alpha.48",
     "@types/deep-diff": "^1.0.0",
     "@types/jest": "^30.0.0",
     "@types/js-beautify": "^1.14.3",
@@ -78,9 +80,10 @@
     "node": ">=18.18.0"
   },
   "peerDependencies": {
-    "reflect-metadata": "*",
     "sequelize": "^6.37.0",
-    "sequelize-typescript": "^2.1.0"
+    "sequelize-typescript": "^2.1.0",
+    "@sequelize/core": "^7.0.0-alpha.48",
+    "reflect-metadata": "*"
   },
   "types": "dist/index.d.ts",
   "files": [
@@ -95,5 +98,19 @@
   "type": "commonjs",
   "bin": {
     "sequelize-typescript-migration": "dist/cli.js"
+  },
+  "peerDependenciesMeta": {
+    "sequelize": {
+      "optional": true
+    },
+    "sequelize-typescript": {
+      "optional": true
+    },
+    "@sequelize/core": {
+      "optional": true
+    },
+    "reflect-metadata": {
+      "optional": true
+    }
   }
 }

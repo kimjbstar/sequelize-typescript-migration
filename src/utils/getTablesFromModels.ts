@@ -1,6 +1,8 @@
 import { Sequelize } from 'sequelize-typescript'
 import type { Model, ModelAttributeColumnOptions, ModelStatic } from 'sequelize'
 import type { IColumnSnapshot, ITableSnapshot, ITables } from '../constants'
+import listModels from '../adapters/listModels'
+import { getMigrationRuntime, getSequelizeMajor } from '../adapters/version'
 import readModelAttributes from '../adapters/readModelAttributes'
 import readModelIndexes from '../adapters/readModelIndexes'
 import reverseSequelizeColType from './reverseSequelizeColType'
@@ -28,16 +30,17 @@ const COPIED_ATTRIBUTE_KEYS = [
  */
 export default function getTablesFromModels(
 	sequelize: Sequelize,
-	models: {
-		[key: string]: ModelStatic<Model>
-	},
+	models: ModelStatic<Model>[] | { [key: string]: ModelStatic<Model> },
 ) {
 	const tables: ITables = {}
+	// v7 removed the data type aliases from the Sequelize class, so a snapshot taken
+	// there has to name them DataTypes.* for the generated migration to run.
+	const { prefix } = getMigrationRuntime(getSequelizeMajor(sequelize))
 
-	for (const model of Object.values(models)) {
+	for (const model of listModels(sequelize, models)) {
 		tables[model.tableName] = {
 			tableName: model.tableName,
-			schema: buildSchema(sequelize, model),
+			schema: buildSchema(sequelize, model, prefix),
 			indexes: buildIndexes(model),
 		}
 	}
@@ -48,6 +51,7 @@ export default function getTablesFromModels(
 function buildSchema(
 	sequelize: Sequelize,
 	model: ModelStatic<Model>,
+	prefix: string,
 ): Record<string, IColumnSnapshot> {
 	const attributes: {
 		[key: string]: ModelAttributeColumnOptions
@@ -66,8 +70,9 @@ function buildSchema(
 		const seqType: string = reverseSequelizeColType(
 			sequelize,
 			attribute.type,
+			prefix,
 		)
-		if (seqType === 'Sequelize.VIRTUAL') {
+		if (seqType === `${prefix}VIRTUAL`) {
 			console.log(
 				`[SKIP] Skip Sequelize.VIRTUAL column "${column}", defined in model "${model.name}"`,
 			)
@@ -93,6 +98,7 @@ function buildSchema(
 		if (attribute.defaultValue != null) {
 			const defaultValue = reverseSequelizeDefValueType(
 				attribute.defaultValue,
+				prefix,
 			)
 			if (defaultValue.notSupported) {
 				console.log(

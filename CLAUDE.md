@@ -88,12 +88,28 @@ excludes them.
 `src/adapters/` is meant to be the only place, and `reverseSequelizeColType.ts` is the
 documented exception — reaching into DataType instances is that module's entire job.
 
-This matters because **Sequelize v7 rewrites exactly these APIs**: the package becomes
-`@sequelize/core`, `rawAttributes` throws rather than warns, and the DataType classes are
-restructured. Keeping the surface small is what makes that port a contained change. If you
-need a new piece of Sequelize internals, add an adapter rather than reaching for it inline.
+This is what made experimental v7 support cheap. Everything that differs between the two
+versions lives in `src/adapters/`, and nothing outside that directory branches on the
+version. If you need a new piece of Sequelize internals, add an adapter rather than reaching
+for it inline.
 
-v7 is still alpha and this package targets v6 only.
+**What actually differs in v7** (all measured against alpha.48, not assumed):
+
+| | v6 | v7 |
+|---|---|---|
+| models | plain object | `ModelSetView`, iterable, `Object.values` gives `[]` |
+| attributes | `rawAttributes` | `rawAttributes` **throws**; `getAttributes()` works in both |
+| indexes | `options.indexes` | `options.indexes` is empty; `getIndexes()` |
+| data type id | `.key` | `.key` **throws**; `constructor.name` works in both |
+| type namespace | `Sequelize.STRING` | removed — `DataTypes.STRING` |
+| `showAllTables` | `string[]` | `TableNameWithSchema[]` |
+| `bulkDelete` | `(table, where)` | `(table, { where })` |
+| model reuse | allowed | a model may belong to **one** instance only |
+
+**The package requires no Sequelize at runtime.** `QueryTypes.SELECT` is the literal
+`'SELECT'` in both versions and `DataTypes` is read off the instance the caller passed
+(`sequelize.constructor.DataTypes`, present on both). That is what lets a single build serve
+v6 and v7. Keep it that way — adding `require('sequelize')` back would break v7 support.
 
 ## Testing approach
 

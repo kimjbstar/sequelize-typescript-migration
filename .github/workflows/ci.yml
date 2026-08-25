@@ -128,6 +128,22 @@ jobs:
       - run: npm install --no-save sequelize@${{ matrix.sequelize-version }}
       - run: npm test
 
+  sequelize-v7:
+    # Experimental. v7 is still alpha upstream with no beta, so a breaking change in the
+    # next alpha is a question of when, not if -- this job reports it without blocking
+    # anything. Support is only claimed as experimental in the README for the same reason.
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx jest -c jest.integration.config.js src/v7.integration.spec.ts
+
   packaging:
     runs-on: ubuntu-latest
     needs: build-and-test

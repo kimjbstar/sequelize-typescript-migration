@@ -1,6 +1,14 @@
-import { QueryTypes } from 'sequelize'
+import type { QueryTypes } from 'sequelize'
 import { Sequelize } from 'sequelize-typescript'
-import { getDialect, quoteTableName } from '../adapters/dialect'
+import { getDialect, listTableNames, quoteTableName } from '../adapters/dialect'
+
+/**
+ * The literal value of QueryTypes.SELECT in both v6 and v7.
+ *
+ * Written out rather than imported so this package requires no Sequelize at runtime --
+ * it works against whichever copy the consumer installed, v6 or v7, without picking one.
+ */
+const SELECT = 'SELECT' as QueryTypes.SELECT
 
 const META_TABLE = 'SequelizeMeta'
 const STATE_TABLE = 'SequelizeMetaMigrations'
@@ -23,7 +31,7 @@ export default async function getLastMigrationState(sequelize: Sequelize) {
 	// No bookkeeping table means nothing has ever been migrated. Checking rather than
 	// letting the SELECT fail matters for preview runs, which deliberately skip creating
 	// these tables so that "show me what would change" stays read-only.
-	const existing = await listTables(sequelize)
+	const existing = await listTableNames(sequelize)
 
 	if (!includesTable(existing, META_TABLE)) {
 		return undefined
@@ -45,7 +53,7 @@ export default async function getLastMigrationState(sequelize: Sequelize) {
 
 	const [lastExecutedMigration] = await sequelize.query<{ name: string }>(
 		`SELECT name FROM ${metaTable} ORDER BY name DESC LIMIT 1`,
-		{ type: QueryTypes.SELECT },
+		{ type: SELECT },
 	)
 
 	const lastRevision = lastExecutedMigration
@@ -54,7 +62,7 @@ export default async function getLastMigrationState(sequelize: Sequelize) {
 
 	const [lastMigration] = await sequelize.query<{ state: unknown }>(
 		`SELECT state FROM ${stateTable} WHERE revision = :revision`,
-		{ type: QueryTypes.SELECT, replacements: { revision: lastRevision } },
+		{ type: SELECT, replacements: { revision: lastRevision } },
 	)
 
 	if (!lastMigration) {
@@ -86,18 +94,6 @@ function parseState(state: unknown): unknown {
 				'may have been modified outside this tool.',
 		)
 	}
-}
-
-/**
- * Uses showAllTables rather than catching the query error, because every dialect words
- * "missing table" differently and swallowing errors by message would also hide genuine
- * connection and permission failures.
- */
-async function listTables(sequelize: Sequelize): Promise<string[]> {
-	const tables = await sequelize.getQueryInterface().showAllTables()
-	return tables.map((table) =>
-		typeof table === 'string' ? table : String(table),
-	)
 }
 
 /** Case-insensitive: Postgres lowercases anything that was created unquoted. */

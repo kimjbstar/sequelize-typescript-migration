@@ -3,11 +3,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import removeCurrentRevisionMigrations from './removeCurrentRevisionMigrations'
 
-/**
- * The module the generated migration requires at runtime. Sequelize v7 renames this to
- * '@sequelize/core', so keeping it as a constant makes that a one-line change.
- */
-const SEQUELIZE_MODULE = 'sequelize'
+/** Default runtime: Sequelize v6, whose migrations require 'sequelize'. */
+const DEFAULT_IMPORT_STATEMENT = "const Sequelize = require('sequelize');"
 export interface IMigrationCommands {
 	commandsUp: string[]
 	commandsDown: string[]
@@ -16,6 +13,11 @@ export interface IMigrationCommands {
 
 export interface IWriteMigrationOptions {
 	outDir: string
+	/**
+	 * The import line the generated file opens with. Differs between Sequelize versions:
+	 * v7 ships as '@sequelize/core' and requires DataTypes rather than Sequelize.
+	 */
+	importStatement?: string
 	migrationName?: string
 	comment?: string
 	keepFiles?: boolean
@@ -60,7 +62,7 @@ export default async function writeMigration(
 	// the shared `pos` meant a second `up()` call resumed instead of restarting.
 	const template = `'use strict';
 
-const Sequelize = require('${SEQUELIZE_MODULE}');
+${options.importStatement ?? DEFAULT_IMPORT_STATEMENT}
 
 /**
  * Actions summary:

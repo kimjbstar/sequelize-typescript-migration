@@ -3,6 +3,8 @@ import beautify from 'js-beautify'
 import * as fs from 'fs'
 import { IMigrationState, ITables } from './constants'
 import type { Model, ModelStatic, QueryInterface } from 'sequelize'
+import listModels from './adapters/listModels'
+import { getMigrationRuntime, getSequelizeMajor } from './adapters/version'
 import getTablesFromModels from './utils/getTablesFromModels'
 import getDiffActionsFromTables from './utils/getDiffActionsFromTables'
 import getMigration from './utils/getMigration'
@@ -63,9 +65,8 @@ export class SequelizeTypescriptMigration {
 		}
 		await sequelize.authenticate()
 
-		const models: {
-			[key: string]: ModelStatic<Model>
-		} = sequelize.models
+		// v7 exposes models as an iterable view rather than a plain object.
+		const models: ModelStatic<Model>[] = listModels(sequelize)
 
 		const queryInterface: QueryInterface = sequelize.getQueryInterface()
 
@@ -129,11 +130,13 @@ export class SequelizeTypescriptMigration {
 			}
 		}
 
-		const info = await writeMigration(
-			currentState.revision,
-			migration,
-			options,
+		const { importStatement } = getMigrationRuntime(
+			getSequelizeMajor(sequelize),
 		)
+		const info = await writeMigration(currentState.revision, migration, {
+			...options,
+			importStatement,
+		})
 
 		console.log(
 			`New migration to revision ${currentState.revision} has been saved to file '${info.filename}'`,
@@ -143,9 +146,20 @@ export class SequelizeTypescriptMigration {
 		// silent failure here would make the next migration re-emit changes that already
 		// exist. See https://github.com/sequelize/sequelize/issues/8310 for why this is
 		// stored in a table of our own rather than alongside SequelizeMeta.
-		await queryInterface.bulkDelete(STATE_TABLE, {
-			revision: currentState.revision,
-		})
+		//
+		// v7 moved the where clause into the options object: bulkDelete(table, where) in
+		// v6 became bulkDelete(table, { where }).
+		const where = { revision: currentState.revision }
+		await (getSequelizeMajor(sequelize) === 7
+			? (
+					queryInterface as unknown as {
+						bulkDelete(
+							table: string,
+							options: { where: unknown },
+						): Promise<unknown>
+					}
+				).bulkDelete(STATE_TABLE, { where })
+			: queryInterface.bulkDelete(STATE_TABLE, where))
 		await queryInterface.bulkInsert(STATE_TABLE, [
 			{
 				revision: currentState.revision,

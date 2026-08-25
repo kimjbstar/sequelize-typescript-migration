@@ -14,7 +14,8 @@ Bugs and feature requests go to [Issues](https://github.com/kimjbstar/sequelize-
 
 **Contents** · [Why](#why-this-exists) · [Install](#install) · [Usage](#usage) · [CLI](#cli) ·
 [Options](#options) · [What it generates](#what-it-generates) · [Upgrading](#upgrading) ·
-[Limitations](#limitations) · [Relationship to the forks](#relationship-to-the-forks) ·
+[Sequelize 7](#sequelize-7) · [Limitations](#limitations) ·
+[Relationship to the forks](#relationship-to-the-forks) ·
 [FAQ](#faq) · [Contributing](./CONTRIBUTING.md)
 
 > **In a hurry?** Run the first migration with `preview: true` and read the output before
@@ -43,8 +44,8 @@ This package declares `sequelize` and `sequelize-typescript` as peer dependencie
 no database driver of its own — **install the driver for your dialect yourself** (`mysql2`,
 `pg` + `pg-hstore`, `sqlite3`, …), the same one your application already uses.
 
-Requires Sequelize 6 and Node 18.18 or newer. Sequelize 7 (`@sequelize/core`) is still alpha
-and is not supported.
+Requires Node 18.18 or newer. Sequelize 6 is the supported target; **Sequelize 7 works but is
+experimental** — see [Sequelize 7](#sequelize-7).
 
 ## Usage
 
@@ -271,6 +272,35 @@ Those forks name the snapshot table `SequelizeMigrationsMeta` while this package
 `SequelizeMetaMigrations`. This package reads both, so your history is picked up
 automatically and you will not get a spurious "create every table" migration.
 
+## Sequelize 7
+
+Sequelize 7 (`@sequelize/core`) is supported, **experimentally**. The whole pipeline runs
+against it — including generating, applying and rolling back a migration — and that is
+covered by its own test suite. What makes it experimental is upstream, not here: v7 has been
+in alpha since 2021, the most recent release was alpha.48 in February 2026, there is still no
+beta, and its APIs have changed between alphas before.
+
+Nothing changes in how you call this package. Point it at a v7 `Sequelize` and it adapts:
+
+- models come from the iterable `ModelSetView` rather than a plain object
+- attributes come from `getAttributes()`, since `rawAttributes` throws in v7
+- indexes come from `getIndexes()`, since `options.indexes` is left empty
+- the generated migration requires `@sequelize/core` and renders types as `DataTypes.*`,
+  because v7 removed the `Sequelize.STRING` aliases
+
+Note that v7 does not use `sequelize-typescript` — its decorators live in
+`@sequelize/core/decorators-legacy`, and `@ForeignKey` in particular has no equivalent
+(the foreign key is a plain attribute, named in the association decorator instead).
+`sequelize-typescript` has had no release since 2023 and declares a peer dependency on
+Sequelize 6, so it is not going to gain v7 support.
+
+Running the migration is also different: `@sequelize/cli`'s migration commands are merged
+upstream but not yet published, so [umzug](https://github.com/sequelize/umzug) is currently
+the released way to apply migrations on v7.
+
+This package requires no Sequelize at runtime at all — it uses whichever copy you pass it,
+which is what lets one build serve both versions.
+
 ## Limitations
 
 Worth knowing before you adopt this:
@@ -330,9 +360,8 @@ the column. If you hit that error, please
 type name.
 
 **Does it support Sequelize 7?**
-Not yet. Sequelize 7 (`@sequelize/core`) is still alpha and removes several APIs this tool
-depends on. The places that read Sequelize internals are isolated in `src/adapters/` so the
-port stays tractable when v7 stabilises.
+Experimentally, yes — see [Sequelize 7](#sequelize-7). It works and is tested, but v7 itself
+is still alpha upstream, so treat it as such.
 
 **Can I run it against Postgres?**
 Yes. Older versions failed on Postgres because unquoted identifiers get folded to lowercase —
