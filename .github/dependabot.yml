@@ -44,6 +44,15 @@ updates:
       # peerDependency range already excludes it; this stops the noise.
       - dependency-name: 'sequelize'
         update-types: ['version-update:semver-major']
+      # Both declare a Node floor above this package's own `engines.node` (>=18.18):
+      # eslint 10 wants ^20.19 || ^22.13 || >=24, rimraf 6 wants 20 || >=22. Taking them
+      # would mean raising the floor for everyone to satisfy two dev tools.
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@eslint/js'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'rimraf'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: '/'
