@@ -5,6 +5,13 @@ import { getDialect, quoteTableName } from '../adapters/dialect'
 const META_TABLE = 'SequelizeMeta'
 const STATE_TABLE = 'SequelizeMetaMigrations'
 
+/**
+ * The name the widely used forks of this package (`-lts`, `@techntools/...`) give the
+ * same table. Reading it lets someone switch back without their entire schema being
+ * re-emitted as new -- a mismatch here looks exactly like "nothing was ever migrated".
+ */
+const FORK_STATE_TABLE = 'SequelizeMigrationsMeta'
+
 /** Revision used when nothing has ever been migrated, so the state lookup finds nothing. */
 const NO_REVISION = -1
 
@@ -16,13 +23,25 @@ export default async function getLastMigrationState(sequelize: Sequelize) {
 	// No bookkeeping table means nothing has ever been migrated. Checking rather than
 	// letting the SELECT fail matters for preview runs, which deliberately skip creating
 	// these tables so that "show me what would change" stays read-only.
-	if (!(await hasBookkeepingTables(sequelize))) {
+	const existing = await listTables(sequelize)
+
+	if (!includesTable(existing, META_TABLE)) {
+		return undefined
+	}
+
+	const stateTableName = includesTable(existing, STATE_TABLE)
+		? STATE_TABLE
+		: includesTable(existing, FORK_STATE_TABLE)
+			? FORK_STATE_TABLE
+			: undefined
+
+	if (!stateTableName) {
 		return undefined
 	}
 
 	const dialect = getDialect(sequelize)
 	const metaTable = quoteTableName(dialect, META_TABLE)
-	const stateTable = quoteTableName(dialect, STATE_TABLE)
+	const stateTable = quoteTableName(dialect, stateTableName)
 
 	const [lastExecutedMigration] = await sequelize.query<{ name: string }>(
 		`SELECT name FROM ${metaTable} ORDER BY name DESC LIMIT 1`,
@@ -74,16 +93,16 @@ function parseState(state: unknown): unknown {
  * "missing table" differently and swallowing errors by message would also hide genuine
  * connection and permission failures.
  */
-async function hasBookkeepingTables(sequelize: Sequelize): Promise<boolean> {
+async function listTables(sequelize: Sequelize): Promise<string[]> {
 	const tables = await sequelize.getQueryInterface().showAllTables()
-	const names = tables.map((table) =>
-		(typeof table === 'string' ? table : String(table)).toLowerCase(),
+	return tables.map((table) =>
+		typeof table === 'string' ? table : String(table),
 	)
+}
 
-	return (
-		names.includes(META_TABLE.toLowerCase()) &&
-		names.includes(STATE_TABLE.toLowerCase())
-	)
+/** Case-insensitive: Postgres lowercases anything that was created unquoted. */
+function includesTable(tables: string[], name: string): boolean {
+	return tables.some((table) => table.toLowerCase() === name.toLowerCase())
 }
 
 /**

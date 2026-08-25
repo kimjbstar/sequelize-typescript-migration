@@ -155,7 +155,7 @@ describe('getLastMigrationState', () => {
 			expect(queries).toEqual([])
 		})
 
-		it('둘 중 하나만 있어도 조회하지 않는다', async () => {
+		it('SequelizeMeta만 있고 상태 테이블이 없으면 조회하지 않는다', async () => {
 			const { sequelize, queries } = stubSequelize([[], []], 'sqlite', [
 				'SequelizeMeta',
 			])
@@ -163,6 +163,64 @@ describe('getLastMigrationState', () => {
 			await getLastMigrationState(sequelize)
 
 			expect(queries).toEqual([])
+		})
+	})
+
+	describe('fork compatibility', () => {
+		// The widely used forks (-lts, @techntools/...) name the same table
+		// SequelizeMigrationsMeta. Without this fallback, switching from a fork looks
+		// exactly like "nothing was ever migrated" and the entire schema is re-emitted
+		// as new tables.
+		it('포크가 쓰는 SequelizeMigrationsMeta에서도 상태를 읽는다', async () => {
+			const state = { revision: 5, version: 1, tables: {} }
+			const { sequelize, queries } = stubSequelize(
+				[[{ name: '00000005-x' }], [{ state }]],
+				'mysql',
+				['SequelizeMeta', 'SequelizeMigrationsMeta'],
+			)
+
+			await expect(getLastMigrationState(sequelize)).resolves.toBe(state)
+			expect(queries[1].sql).toContain('SequelizeMigrationsMeta')
+		})
+
+		it('둘 다 있으면 이 패키지의 테이블을 우선한다', async () => {
+			const { sequelize, queries } = stubSequelize(
+				[[{ name: '00000001-x' }], []],
+				'mysql',
+				[
+					'SequelizeMeta',
+					'SequelizeMetaMigrations',
+					'SequelizeMigrationsMeta',
+				],
+			)
+
+			await getLastMigrationState(sequelize)
+
+			expect(queries[1].sql).toContain('SequelizeMetaMigrations')
+			expect(queries[1].sql).not.toContain('SequelizeMigrationsMeta')
+		})
+
+		it('상태 테이블이 어느 쪽도 없으면 조회하지 않는다', async () => {
+			const { sequelize, queries } = stubSequelize([[], []], 'mysql', [
+				'SequelizeMeta',
+			])
+
+			await expect(
+				getLastMigrationState(sequelize),
+			).resolves.toBeUndefined()
+			expect(queries).toEqual([])
+		})
+
+		it('Postgres가 소문자로 접어둔 테이블명도 찾아낸다', async () => {
+			// An older run that created these unquoted leaves them lowercased.
+			const state = { revision: 2, version: 1, tables: {} }
+			const { sequelize } = stubSequelize(
+				[[{ name: '00000002-x' }], [{ state }]],
+				'postgres',
+				['sequelizemeta', 'sequelizemetamigrations'],
+			)
+
+			await expect(getLastMigrationState(sequelize)).resolves.toBe(state)
 		})
 	})
 

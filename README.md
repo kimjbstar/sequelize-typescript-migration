@@ -1,87 +1,157 @@
 # sequelize-typescript-migration
 
-It is based on [sequelize-typescript](https://www.npmjs.com/package/sequelize-typescript), not supports "sequelize" based model codes.
-and you need prior knowledge of migration of Sequelize.
+[![npm version](https://img.shields.io/npm/v/sequelize-typescript-migration.svg)](https://www.npmjs.com/package/sequelize-typescript-migration)
+[![npm downloads](https://img.shields.io/npm/dm/sequelize-typescript-migration.svg)](https://www.npmjs.com/package/sequelize-typescript-migration)
+[![CI](https://github.com/kimjbstar/sequelize-typescript-migration/actions/workflows/ci.yml/badge.svg)](https://github.com/kimjbstar/sequelize-typescript-migration/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/sequelize-typescript-migration.svg)](./LICENSE.md)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-[Sequelize Migration Manual](https://sequelize.org/master/manual/migrations.html)
+Generates `sequelize-cli` migration files by diffing your `sequelize-typescript` models
+against the schema recorded by the previous run. Django's `makemigrations`, for Sequelize.
 
-This scans models and its decorators to find changes, and generates migration code with this changes so don't need to write up, down function manually. this is like "makemigration" in django framework.
+Bugs and feature requests go to [Issues](https://github.com/kimjbstar/sequelize-typescript-migration/issues);
+"how do I..." questions to [Discussions](https://github.com/kimjbstar/sequelize-typescript-migration/discussions).
 
-After generate successfully, you can use "migrate" in [Sequelize](https://sequelize.org/)
-[Sequelize Migration Manual](https://sequelize.org/master/manual/migrations.html)
+**Contents** · [Why](#why-this-exists) · [Install](#install) · [Usage](#usage) · [CLI](#cli) ·
+[Options](#options) · [What it generates](#what-it-generates) · [Upgrading](#upgrading) ·
+[Limitations](#limitations) · [Relationship to the forks](#relationship-to-the-forks) ·
+[FAQ](#faq) · [Contributing](./CONTRIBUTING.md)
 
-**This refers to [GitHub - flexxnn/sequelize-auto-migrations: Migration generator && runner for sequelize](https://github.com/flexxnn/sequelize-auto-migrations) and its forks, and modified to typescript.**
+> **In a hurry?** Run the first migration with `preview: true` and read the output before
+> writing anything. This is doubly true if you are coming from an older version or from a
+> fork — see [Upgrading](#upgrading).
 
-Sometimes, undo(down) action may not work, then you should modify manually. Maybe it's because of ordering of relations of models.
-That issue is currently in the works.
+## Why this exists
 
-## Installation
+Sequelize does not generate migrations from your models, and
+[has declined to add the feature](https://github.com/sequelize/sequelize/issues/17447).
+`sequelize-cli migration:generate` creates an empty file with `up` and `down` stubs for you
+to fill in by hand; the official docs are explicit that "you define those functions
+manually."
+
+Of the major TypeScript ORMs, Sequelize is the only one without diff-based migration
+generation. Prisma, Drizzle, TypeORM and MikroORM all have it. This package fills that gap
+for codebases already on Sequelize.
+
+## Install
 
 ```
 npm i -D sequelize-typescript-migration
 ```
 
-## Usage Example
+This package declares `sequelize` and `sequelize-typescript` as peer dependencies and ships
+no database driver of its own — **install the driver for your dialect yourself** (`mysql2`,
+`pg` + `pg-hstore`, `sqlite3`, …), the same one your application already uses.
+
+Requires Sequelize 6 and Node 18.18 or newer. Sequelize 7 (`@sequelize/core`) is still alpha
+and is not supported.
+
+## Usage
 
 ```typescript
-import { Sequelize } from "sequelize-typescript";
-import { SequelizeTypescriptMigration } from "sequelize-typescript-migration";
+import path from 'path'
+import { Sequelize } from 'sequelize-typescript'
+import { SequelizeTypescriptMigration } from 'sequelize-typescript-migration'
 
-const sequelize: Sequelize = new Sequelize({
-	// .. options
-});
+const sequelize = new Sequelize({
+	/* your usual options and models */
+})
 
-await SequelizeTypescriptMigration.makeMigration(sequelize, {
-	outDir: path.join(__dirname, "../migrations"),
-	migrationName: "add-awesome-field-in-my-table"
+const result = await SequelizeTypescriptMigration.makeMigration(sequelize, {
+	outDir: path.join(__dirname, '../migrations'),
+	migrationName: 'add-awesome-field-in-my-table',
 	preview: false,
-});
-```
+})
 
-let's see example, if you have this two models and run first makeMigration, it detects all table change from nothing.
-
-```typescript
-@Table
-export class CarBrand extends Model<CarBrand> {
-  @Column
-  name: string;
-
-  @Default(true)
-  @Column(DataType.BOOLEAN)
-  isCertified: boolean;
-
-  @Column
-  imgUrl: string;
-
-  @Column
-  orderNo: number;
-
-  @Column
-  carsCount: number;
+if (result.status === 'written') {
+	console.log(`wrote ${result.filename}`)
 }
 ```
 
+Point `outDir` at the same directory `sequelize-cli` reads migrations from. Then apply it the
+way you always do:
+
+```
+npx sequelize db:migrate
+```
+
+The result is a discriminated union, so you can branch on it without matching on strings:
+
+```typescript
+type MigrationResult =
+	| { status: 'no-changes' }
+	| { status: 'preview'; up: string[]; down: string[] }
+	| { status: 'written'; filename: string; revision: number }
+```
+
+## CLI
+
+If you would rather not write a bootstrap script:
+
+```
+npx sequelize-typescript-migration \
+  --config ./dist/database.js \
+  --out-dir ./migrations \
+  --name add-awesome-field
+```
+
+`--config` points at a module that exports your `Sequelize` instance — as a default export,
+as a named `sequelize` export, or as `module.exports` itself. All three work.
+
+TypeScript config files need a loader, since this package does not bundle one:
+
+```
+node --import tsx ./node_modules/.bin/sequelize-typescript-migration \
+  --config ./src/database.ts --out-dir ./migrations
+```
+
+Run `npx sequelize-typescript-migration --help` for the full flag list.
+
+## Options
+
+| Option          | Type      | Default    | Description                                                     |
+| --------------- | --------- | ---------- | --------------------------------------------------------------- |
+| `outDir`        | `string`  | *required* | Where to write the migration. Point at your sequelize-cli path.  |
+| `migrationName` | `string`  | `"noname"` | Goes into the filename; spaces become underscores.               |
+| `preview`       | `boolean` | `false`    | Print what would be generated and write nothing. Read-only.      |
+| `comment`       | `string`  | `""`       | Recorded in the migration's `info` block.                        |
+| `debug`         | `boolean` | `false`    | Extra logging on failure.                                        |
+
+## What it generates
+
+Given two models:
+
 ```typescript
 @Table
-export class Car extends Model<Car> {
-  @Column
-  name: string;
+export class CarBrand extends Model {
+	@Column
+	declare name: string
 
-  @ForeignKey(() => CarBrand)
-  @Column
-  carBrandId: number;
+	@Default(true)
+	@Column(DataType.BOOLEAN)
+	declare isCertified: boolean
+}
 
-  @BelongsTo(() => CarBrand)
-  carBrand: CarBrand;
+@Table
+export class Car extends Model {
+	@Column
+	declare name: string
+
+	@ForeignKey(() => CarBrand)
+	@Column
+	declare carBrandId: number
+
+	@BelongsTo(() => CarBrand)
+	declare carBrand: CarBrand
 }
 ```
 
-then this code written to 00000001-noname.js in migrations path.
+the first run writes `00000001-noname.js`:
 
 ```javascript
-"use strict";
+'use strict';
 
-var Sequelize = require("sequelize");
+const Sequelize = require('sequelize');
 
 /**
  * Actions summary:
@@ -91,142 +161,180 @@ var Sequelize = require("sequelize");
  *
  **/
 
-var info = {
-  revision: 1,
-  name: "noname",
-  created: "2020-04-12T15:49:58.814Z",
-  comment: "",
+const info = {
+    "revision": 1,
+    "name": "noname",
+    "created": "2026-08-25T07:09:51.308Z",
+    "comment": ""
 };
 
-var migrationCommands = [
-  {
-    fn: "createTable",
-    params: [
-      "CarBrands",
-      {
-        id: {
-          autoIncrement: true,
-          primaryKey: true,
-          allowNull: false,
-          type: Sequelize.INTEGER,
-        },
-        name: {
-          type: Sequelize.STRING,
-        },
-        isCertified: {
-          type: Sequelize.BOOLEAN,
-        },
-        imgUrl: {
-          type: Sequelize.STRING,
-        },
-        orderNo: {
-          type: Sequelize.INTEGER,
-        },
-        carsCount: {
-          type: Sequelize.INTEGER,
-        },
-        createdAt: {
-          allowNull: false,
-          type: Sequelize.DATE,
-        },
-        updatedAt: {
-          allowNull: false,
-          type: Sequelize.DATE,
-        },
-      },
-      {},
-    ],
-  },
+const migrationCommands = [
 
-  {
-    fn: "createTable",
-    params: [
-      "Cars",
-      {
-        id: {
-          autoIncrement: true,
-          primaryKey: true,
-          allowNull: false,
-          type: Sequelize.INTEGER,
-        },
-        name: {
-          type: Sequelize.STRING,
-        },
-        carBrandId: {
-          onDelete: "NO ACTION",
-          onUpdate: "CASCADE",
-          references: {
-            model: "CarBrands",
-            key: "id",
-          },
-          allowNull: true,
-          type: Sequelize.INTEGER,
-        },
-        createdAt: {
-          allowNull: false,
-          type: Sequelize.DATE,
-        },
-        updatedAt: {
-          allowNull: false,
-          type: Sequelize.DATE,
-        },
-      },
-      {},
-    ],
-  },
+    {
+        fn: "createTable",
+        params: [
+            "CarBrands",
+            {
+                "id": {
+                    "autoIncrement": true,
+                    "primaryKey": true,
+                    "allowNull": false,
+                    "type": Sequelize.INTEGER
+                },
+                "name": {
+                    "type": Sequelize.STRING
+                },
+                "isCertified": {
+                    "defaultValue": true,
+                    "type": Sequelize.BOOLEAN
+                },
+                "createdAt": {
+                    "allowNull": false,
+                    "type": Sequelize.DATE
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "type": Sequelize.DATE
+                }
+            },
+            {}
+        ]
+    },
+
+    // ... createTable "Cars", with a references block pointing at CarBrands
 ];
 
-var rollbackCommands = [
-  {
-    fn: "dropTable",
-    params: ["Cars"],
-  },
-  {
-    fn: "dropTable",
-    params: ["CarBrands"],
-  },
+const rollbackCommands = [{
+        fn: "dropTable",
+        params: ["Cars"]
+    },
+    {
+        fn: "dropTable",
+        params: ["CarBrands"]
+    }
 ];
+
+async function runCommands(queryInterface, commands) {
+    for (let index = 0; index < commands.length; index++) {
+        const command = commands[index];
+        if (typeof queryInterface[command.fn] !== "function") {
+            throw new Error(
+                "[#" + index + "] unknown queryInterface method: " + command.fn
+            );
+        }
+        console.log("[#" + index + "] execute: " + command.fn);
+        await queryInterface[command.fn].apply(queryInterface, command.params);
+    }
+}
 
 module.exports = {
-  pos: 0,
-  up: function (queryInterface, Sequelize) {
-    var index = this.pos;
-    return new Promise(function (resolve, reject) {
-      function next() {
-        if (index < migrationCommands.length) {
-          let command = migrationCommands[index];
-          console.log("[#" + index + "] execute: " + command.fn);
-          index++;
-          queryInterface[command.fn]
-            .apply(queryInterface, command.params)
-            .then(next, reject);
-        } else resolve();
-      }
-      next();
-    });
-  },
-  down: function (queryInterface, Sequelize) {
-    var index = this.pos;
-    return new Promise(function (resolve, reject) {
-      function next() {
-        if (index < rollbackCommands.length) {
-          let command = rollbackCommands[index];
-          console.log("[#" + index + "] execute: " + command.fn);
-          index++;
-          queryInterface[command.fn]
-            .apply(queryInterface, command.params)
-            .then(next, reject);
-        } else resolve();
-      }
-      next();
-    });
-  },
-  info: info,
+    up: function(queryInterface, Sequelize) {
+        return runCommands(queryInterface, migrationCommands);
+    },
+    down: function(queryInterface, Sequelize) {
+        return runCommands(queryInterface, rollbackCommands);
+    },
+    info: info
 };
 ```
 
-then you can apply this `npx sequelize db:migrate --to 00000001-noname.js`
+Note `isCertified`: the `@Default(true)` made it into the migration. That is worth pointing
+out because it did not, in every version before this one.
 
-## Documentation
+Tables are ordered so a foreign key never precedes the table it references, and `down`
+reverses that order.
 
-not ready yet.
+## Upgrading
+
+**Run your first migration with `preview: true` and read the output.** Recent versions fixed
+several bugs that had been quietly changing what got generated, so your next run will
+legitimately show differences that are not schema changes you made.
+
+Specifically:
+
+- **Default values now appear.** They previously never reached a generated migration at all —
+  the value was computed and then discarded. If your models use `@Default`, expect
+  `changeColumn` entries adding them.
+- **`JSON`, `DOUBLE`, `FLOAT` and `REAL` columns now appear.** These were silently dropped:
+  the type lookup missed them and the column vanished from the migration without a word.
+- **Index identity changed.** Indexes are now identified by what they do rather than by the
+  shape of the object that described them, which stops a reordered decorator from looking
+  like a schema change. The one-time cost is that existing indexes are re-created on the
+  first run after upgrading.
+- **`makeMigration` no longer calls `process.exit`.** If you relied on the process ending
+  when there was nothing to do, check for `status === 'no-changes'` instead.
+- **Failures now throw.** A missing `outDir`, or a failure to record the snapshot, used to be
+  reported as success.
+
+Coming from `sequelize-typescript-migration-lts` or `@techntools/sequelize-typescript-migration`?
+Those forks name the snapshot table `SequelizeMigrationsMeta` while this package uses
+`SequelizeMetaMigrations`. This package reads both, so your history is picked up
+automatically and you will not get a spurious "create every table" migration.
+
+## Limitations
+
+Worth knowing before you adopt this:
+
+- **The previous state comes from a snapshot, not from the database.** Each run diffs your
+  models against JSON this tool stored on the previous run — there is no introspection of the
+  live schema. Drizzle Kit works the same way, and it is a reasonable design, but it means
+  **schema changes made outside this tool are not noticed** and will silently skew the next
+  migration. There is no drift detection yet.
+- **Column renames are seen as a drop plus an add.** A diff cannot tell renaming from
+  deleting-and-creating, so review those by hand before running them against data you care
+  about.
+- **`down` is generated by reversing the diff**, not by inverting each command. It is far
+  better than it used to be — foreign-key ordering is now a real topological sort, and the
+  round trip is covered by tests against MySQL, Postgres and SQLite — but a complex change
+  is still worth reading before you rely on rolling it back.
+- **Always read the generated migration before applying it.** This is true of every tool in
+  this category.
+
+## Relationship to the forks
+
+This package went unmaintained after 2020, and the community carried it forward. That work
+was real and this version builds on it:
+
+| Package                                     | Contributed                                                            |
+| ------------------------------------------- | ---------------------------------------------------------------------- |
+| [flexxnn/sequelize-auto-migrations][auto]    | The original design this package was a TypeScript rewrite of.           |
+| [sequelize-typescript-migration-lts][lts]    | Sequelize 6 support, the `useSnakeCase` option, dropping `process.exit`. |
+| [@techntools/...][techntools]                | Postgres identifier quoting, topological sorting, the `defaultValue` fix. |
+
+[auto]: https://github.com/flexxnn/sequelize-auto-migrations
+[lts]: https://www.npmjs.com/package/sequelize-typescript-migration-lts
+[techntools]: https://www.npmjs.com/package/@techntools/sequelize-typescript-migration
+
+What this version adds on top: peer dependencies instead of a bundled MySQL driver,
+published type declarations, a real CLI, a test suite (unit plus integration against MySQL,
+Postgres and SQLite), CI, and fixes for several data-loss bugs none of the forks had caught —
+the discarded default values, the silently dropped `JSON` and `DOUBLE` columns, and a
+`removeCurrentRevisionMigrations` that never actually removed anything.
+
+## FAQ
+
+**Does this work with plain Sequelize models, without decorators?**
+No. It reads `sequelize-typescript` model metadata. Plain `sequelize.define()` models are not
+supported.
+
+**Does it apply the migration too?**
+No, and that is deliberate. It writes the file; `sequelize-cli` runs it. That split is also
+why the bookkeeping is split: this tool writes `SequelizeMetaMigrations`, sequelize-cli writes
+`SequelizeMeta`.
+
+**Why did my column disappear from the migration?**
+It shouldn't any more — that was the `JSON`/`DOUBLE` bug described in
+[Upgrading](#upgrading). An unrecognised type now raises an error instead of quietly skipping
+the column. If you hit that error, please
+[open an issue](https://github.com/kimjbstar/sequelize-typescript-migration/issues) with the
+type name.
+
+**Does it support Sequelize 7?**
+Not yet. Sequelize 7 (`@sequelize/core`) is still alpha and removes several APIs this tool
+depends on. The places that read Sequelize internals are isolated in `src/adapters/` so the
+port stays tractable when v7 stabilises.
+
+**Can I run it against Postgres?**
+Yes. Older versions failed on Postgres because unquoted identifiers get folded to lowercase —
+`SequelizeMeta` became `sequelizemeta` and the query failed. Identifiers are quoted per
+dialect now, and there are integration tests running against a real Postgres.

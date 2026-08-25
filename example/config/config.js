@@ -1,17 +1,18 @@
 const path = require("path");
-const inflection = require("inflection");
 
 module.exports = {
   username: process.env.SEQUELIZE_USERNAME,
   password: process.env.SEQUELIZE_PASSWORD,
-  database: "test_migration2",
+  database: process.env.SEQUELIZE_DATABASE || "test_migration",
   host: process.env.SEQUELIZE_HOST,
   dialect: "mysql",
   models: [path.join(process.cwd(), "models")],
-  modelMatch: (_filename, _member) => {
-    const filename = inflection.camelize(_filename.replace(".model", ""));
-    const member = _member;
-    return filename === member;
-  },
+  // "car_brand.model" -> "CarBrand", matching the exported class name.
+  modelMatch: (filename, member) =>
+    filename
+      .replace(".model", "")
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join("") === member,
   timezone: "+09:00",
 };
