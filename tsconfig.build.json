@@ -1,0 +1,12 @@
+{
+  // Build-only view of the project: the published package ships neither the tests nor
+  // the model fixtures they exercise.
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "dist",
+    "example",
+    "**/*.spec.ts",
+    "src/fixtures/**"
+  ]
+}

@@ -1,41 +1,41 @@
 {
   "compilerOptions": {
-    "target": "es2017",
+    "target": "es2022",
     "module": "commonjs",
     "moduleResolution": "node",
+    "lib": ["esnext"],
+
+    // ts-jest transpiles one file at a time and needs to know it can do that safely.
+    "isolatedModules": true,
+
+    "strict": true,
+
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": "./",
-    "paths": {
-      "@src/*": ["src/*"]
-    },
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
     "outDir": "./dist",
+    "rootDir": "./src",
     "declaration": true,
-    "diagnostics": false,
-    "traceResolution": false,
-    "listEmittedFiles": false,
-    "locale": "ko",
-    "pretty": true,
+
+    // Off on purpose: `files: ["dist"]` publishes only the build output, so a .js.map's
+    // `sources: ["../src/*.ts"]` would point at files that are not in the tarball.
+    // ts-jest supplies its own sourcemaps for test stack traces regardless.
+    "sourceMap": false,
+
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "suppressExcessPropertyErrors": false,
-    "suppressImplicitAnyIndexErrors": false,
-    "noStrictGenericChecks": true,
-    "charset": "utf8",
-    "emitBOM": false,
-    "removeComments": true,
-    "disableSizeLimit": false,
-    "noEmit": false,
-    "noEmitOnError": false,
-    "preserveConstEnums": false,
-    "lib": ["esnext", "dom"],
-    "downlevelIteration": false,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "stripInternal": false,
-    "sourceMap": true,
-    "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "pretty": true,
+    "removeComments": true
   },
+  // Everything under src/, tests included: `npm run typecheck` has to cover the test
+  // suite too. ts-jest transpiles without type checking, so this is the only thing that
+  // reads the specs' types at all.
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "example"]
 }

@@ -67,3 +67,5 @@ dist/
 
 # TernJS port file
 .tern-port
+# Scratch space for tests that must require() generated migrations
+.tmp-test/
