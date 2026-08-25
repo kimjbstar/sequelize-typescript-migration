@@ -44,8 +44,26 @@ const postgresConfig = {
 	database: process.env.POSTGRES_DATABASE ?? 'test_migration',
 }
 
+/** How long to wait before deciding a server is not there. */
+const PROBE_TIMEOUT_MS = 2000
+
+/**
+ * Probing has to fail fast. Sequelize's defaults retry and wait far longer than a jest
+ * hook allows, which turns "no server running" into a timeout failure instead of a skip.
+ */
 const canConnect = async (config: Record<string, unknown>) => {
-	const probe = new Sequelize({ ...config, logging: false } as never)
+	const probe = new Sequelize({
+		...config,
+		logging: false,
+		retry: { max: 0 },
+		pool: { max: 1, acquire: PROBE_TIMEOUT_MS, idle: PROBE_TIMEOUT_MS },
+		dialectOptions: {
+			// mysql2 and pg spell the same option differently.
+			connectTimeout: PROBE_TIMEOUT_MS,
+			connectionTimeoutMillis: PROBE_TIMEOUT_MS,
+		},
+	} as never)
+
 	try {
 		await probe.authenticate()
 		return true
@@ -55,6 +73,9 @@ const canConnect = async (config: Record<string, unknown>) => {
 		await probe.close().catch(() => undefined)
 	}
 }
+
+/** Generous enough for the probe above to settle either way. */
+const PROBE_HOOK_TIMEOUT_MS = 15000
 
 /** Drops everything this suite creates, so each run starts from a clean schema. */
 const dropAll = async (sequelize: Sequelize) => {
@@ -101,7 +122,7 @@ describe('dialect specific behaviour', () => {
 
 		beforeAll(async () => {
 			available = await canConnect(postgresConfig)
-		})
+		}, PROBE_HOOK_TIMEOUT_MS)
 
 		beforeEach(async () => {
 			if (!available) return
@@ -253,7 +274,7 @@ describe('dialect specific behaviour', () => {
 
 		beforeAll(async () => {
 			available = await canConnect(mysqlConfig)
-		})
+		}, PROBE_HOOK_TIMEOUT_MS)
 
 		beforeEach(async () => {
 			if (!available) return
