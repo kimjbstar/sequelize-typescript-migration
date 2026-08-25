@@ -7,6 +7,9 @@ on:
 # A second push while a release is in flight would race the version bump.
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+# Nothing by default; each job asks for exactly what it needs.
+permissions: {}
+
 env:
   HUSKY: 0
 
@@ -14,34 +17,49 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-      # Required for npm provenance.
-      id-token: write
+      contents: write # commit the version bump, create the release and tag
+      pull-requests: write # open and update the "Version Packages" PR
+      id-token: write # npm trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@v4
         with:
           # Changesets needs the history to work out what has landed since the last release.
           fetch-depth: 0
+          # A checked-out credential would remain available to every later step.
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          # `registry-url` is deliberately absent. Setting it makes setup-node write its own
-          # .npmrc that expects NODE_AUTH_TOKEN, and that file takes precedence over the one
-          # Changesets writes -- so publish runs with an empty token and fails with a
-          # confusing 404 rather than a 401.
+          # Cache deliberately off: a poisoned cache would be restored into the job that
+          # publishes to npm.
+          #
+          # `registry-url` is deliberately absent too. Setting it makes setup-node write
+          # its own .npmrc expecting NODE_AUTH_TOKEN, which takes precedence over what
+          # the publish uses and fails with a confusing 404 rather than a 401.
+
+      # Trusted publishing needs npm >= 11.5.1; the version bundled with Node 22 is older.
+      - run: npm install -g npm@latest
+      - run: npm --version
 
       - run: npm ci
       - run: npm run build
       - run: npm test
 
+      # Authentication is OIDC: no NPM_TOKEN anywhere. npm mints a short-lived credential
+      # from this job's identity, and only for the repository and workflow filename
+      # registered as this package's trusted publisher on npmjs.com.
+      #
+      # Provenance is generated automatically under trusted publishing, so
+      # NPM_CONFIG_PROVENANCE is not needed either.
+      #
+      # Upstream recommends splitting this into select-mode/version/pack/publish
+      # sub-actions so that `id-token: write` sits only on the publishing job. For a
+      # single-package repository that releases rarely, the single job is the simpler
+      # trade-off; split it if this ever grows a second package.
       - uses: changesets/action@v2
         with:
           version: npm run changeset:version
           publish: npm run changeset:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true

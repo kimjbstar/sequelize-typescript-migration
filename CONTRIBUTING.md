@@ -98,7 +98,13 @@ need to be a maintainer to trigger this, just to add a changeset to your PR (see
    pull request — it bumps the version and updates `CHANGELOG.md` from whatever changesets have
    landed, and keeps itself up to date as more PRs merge.
 2. When a maintainer merges that PR, the same job detects there are no pending changesets left
-   and runs the actual release: `npm publish` with provenance, a GitHub Release, and a git tag.
+   and runs the actual release: `npm publish`, a GitHub Release, and a git tag.
+
+   Publishing authenticates with [npm trusted publishing](https://docs.npmjs.com/trusted-publishers)
+   over OIDC — there is no npm token in this repository's secrets. npm issues a short-lived
+   credential to the release workflow based on the repository and workflow filename registered
+   as this package's trusted publisher, and provenance attestations are generated automatically.
+   If the workflow file is ever renamed, that registration has to be updated to match.
 3. There is no manual `npm version` step — the version is derived entirely from the changeset
    files' bump types accumulated since the last release.
 
