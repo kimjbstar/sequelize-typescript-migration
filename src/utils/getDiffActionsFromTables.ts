@@ -146,11 +146,15 @@ export default function getDiffActionsFromTables(
 
 					// new index
 					if (path[1] === 'indexes') {
+						// A snapshot can carry a null or undefined index -- JSON round trips
+						// null, and older versions of this tool could store one. There is no
+						// index to add in that case, and reading through it crashes the run.
+						if (!rhs) {
+							break
+						}
+
 						const tableName = path[0]
-						const copied = rhs
-							? JSON.parse(JSON.stringify(rhs))
-							: undefined
-						const index = copied
+						const index = JSON.parse(JSON.stringify(rhs))
 
 						index.actionType = 'addIndex'
 						index.tableName = tableName
@@ -219,6 +223,12 @@ export default function getDiffActionsFromTables(
 					}
 
 					if (path[1] === 'indexes') {
+						// Same guard as the addIndex path above: nothing to remove if the
+						// stored snapshot held a null index.
+						if (!lhs) {
+							break
+						}
+
 						actions.push({
 							actionType: 'removeIndex',
 							tableName,

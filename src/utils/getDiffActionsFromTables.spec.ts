@@ -175,6 +175,47 @@ describe('getDiffActionsFromTables', () => {
 		})
 	})
 
+	describe('malformed index entries', () => {
+		// Reported in #16. A snapshot can carry a null index -- JSON round trips null, and
+		// older versions of this tool could store one -- and reading through it crashed the
+		// run with "Cannot set properties of undefined". The addIndex path had a guard that
+		// did not actually guard: it produced `undefined` and then assigned onto it one line
+		// later. The removeIndex path had none at all.
+		const withIndexes = (indexes: Record<string, unknown>) =>
+			({
+				users: {
+					tableName: 'users',
+					schema: { id: column('Sequelize.INTEGER') },
+					indexes,
+				},
+			}) as unknown as ITables
+
+		it.each([
+			['undefined 인덱스가 추가되면', {}, { h1: undefined }],
+			['undefined 인덱스가 제거되면', { h1: undefined }, {}],
+			['null 인덱스가 추가되면', {}, { h1: null }],
+			['null 인덱스가 제거되면', { h1: null }, {}],
+		])('%s 죽지 않고 액션 없이 넘어간다', (_label, before, after) => {
+			expect(
+				diff(
+					withIndexes(before as Record<string, unknown>),
+					withIndexes(after as Record<string, unknown>),
+				),
+			).toEqual([])
+		})
+
+		it('정상 인덱스는 그대로 처리한다', () => {
+			const index = { fields: ['id'], options: { indexName: 'idx_id' } }
+
+			expect(
+				typesOf(diff(withIndexes({}), withIndexes({ h1: index }))),
+			).toEqual(['addIndex'])
+			expect(
+				typesOf(diff(withIndexes({ h1: index }), withIndexes({}))),
+			).toEqual(['removeIndex'])
+		})
+	})
+
 	describe('multiple simultaneous changes', () => {
 		it('여러 변경을 한 번에 액션으로 만든다', () => {
 			const actions = diff(
