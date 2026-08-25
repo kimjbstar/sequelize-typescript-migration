@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ask a question
+    url: https://github.com/kimjbstar/sequelize-typescript-migration/discussions
+    about: '"How do I..." questions go here. Issues are for bugs and feature requests.'
+  - name: Contributing guide
+    url: https://github.com/kimjbstar/sequelize-typescript-migration/blob/master/CONTRIBUTING.md
+    about: Read before opening a PR — development setup and the PR checklist.

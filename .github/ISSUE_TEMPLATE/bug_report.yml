@@ -1,0 +1,77 @@
+name: Bug report
+description: A migration was generated wrong, or generating one failed
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The most useful bug report is one that can be turned straight into a
+        regression test. A minimal model definition plus the migration you
+        expected gets there fastest.
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead?
+      description: Paste the error, or the part of the generated migration that is wrong.
+    validations:
+      required: true
+
+  - type: textarea
+    id: model
+    attributes:
+      label: Minimal model definition that reproduces it
+      description: >-
+        The smallest set of decorated models that shows the problem. Trim
+        anything the bug does not need.
+      render: typescript
+      placeholder: |
+        @Table({ tableName: 'users' })
+        class User extends Model {
+          @PrimaryKey
+          @Column(DataType.INTEGER)
+          declare id: number
+        }
+    validations:
+      required: true
+
+  - type: textarea
+    id: generated
+    attributes:
+      label: Generated migration
+      description: The file this produced, or the relevant part of it.
+      render: javascript
+
+  - type: dropdown
+    id: dialect
+    attributes:
+      label: Database
+      options:
+        - MySQL / MariaDB
+        - PostgreSQL
+        - SQLite
+        - MSSQL
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: This package, sequelize, sequelize-typescript, and Node.
+      placeholder: 'stm 1.0.0, sequelize 6.37.8, sequelize-typescript 2.1.6, node 22.11.0'
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?

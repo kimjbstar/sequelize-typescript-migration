@@ -1,0 +1,31 @@
+# sequelize-typescript-migration
+
+> Generates sequelize-cli migration files by diffing your sequelize-typescript models
+> against the schema snapshot from the last migration. Django's makemigrations, for
+> Sequelize.
+
+Use it when you have a Sequelize v6 codebase using `sequelize-typescript` decorators and you
+do not want to hand-write migrations. Sequelize itself has no equivalent feature and has
+declined to add one.
+
+Verified against: sequelize 6.20–6.37, sequelize-typescript 2.1, Node 20/22/24,
+MySQL 8.4, PostgreSQL 16, SQLite.
+
+## Docs
+
+- `README.md` — usage, options, and how this relates to the forks of this package.
+- `CLAUDE.md` — architecture, the pipeline, and the non-obvious Sequelize behaviours that
+  shaped the code. Read this before changing anything.
+- `CONTRIBUTING.md` — development setup and PR mechanics.
+
+## Notes for coding agents
+
+- This is a library, not a CLI plugin. You call `SequelizeTypescriptMigration.makeMigration()`
+  and pass it your own `Sequelize` instance. It never constructs one, and it never opens a
+  connection you did not give it.
+- It does not apply migrations. It writes a file; `sequelize-cli` runs it. The two halves of
+  the bookkeeping are split accordingly: this tool writes `SequelizeMetaMigrations`,
+  sequelize-cli writes `SequelizeMeta`.
+- Targets Sequelize v6. v7 (`@sequelize/core`) is still alpha and is not supported.
+- The database driver is the consumer's dependency, not this package's. Nothing here
+  installs mysql2 or pg for you.

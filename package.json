@@ -28,7 +28,10 @@
     "prepublishOnly": "npm run build && npm test",
     "lint:package": "publint --pack npm",
     "verify:packed": "bash scripts/verify-packed-tarball.sh",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:publish": "npm run build && changeset publish"
   },
   "repository": {
     "type": "git",
@@ -44,6 +47,8 @@
     "js-beautify": "^1.15.4"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.1",
     "@eslint/js": "^9.39.0",
     "@types/deep-diff": "^1.0.0",
     "@types/jest": "^30.0.0",

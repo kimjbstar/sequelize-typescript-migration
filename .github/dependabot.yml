@@ -1,0 +1,54 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      # These three move together: sequelize-typescript pins a sequelize range, and the
+      # driver has to stay compatible with both.
+      sequelize:
+        patterns:
+          - 'sequelize'
+          - 'sequelize-typescript'
+          - 'mysql2'
+          - 'pg'
+          - 'pg-hstore'
+          - 'sqlite3'
+      dev-dependencies:
+        dependency-type: development
+        exclude-patterns:
+          - 'sequelize'
+          - 'sequelize-typescript'
+          - 'mysql2'
+          - 'pg'
+          - 'pg-hstore'
+          - 'sqlite3'
+    ignore:
+      # Deliberately short. Each entry here should name a bump that actually broke CI --
+      # an ignore without that evidence is just debt that quietly holds the project back.
+      #
+      # ts-jest tracks the TypeScript compiler API closely enough that a major bump
+      # regularly lands before ts-jest supports it.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      # Tracks the engines.node floor (>=18.18). A major @types/node assumes a newer
+      # runtime than this package claims to support.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # sequelize 7 is a different package (@sequelize/core) and is still alpha. The
+      # peerDependency range already excludes it; this stops the noise.
+      - dependency-name: 'sequelize'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope

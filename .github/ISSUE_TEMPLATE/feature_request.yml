@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest a change to what gets generated, or a new option
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The situation that made you want this, not the solution you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What would you expect it to generate?
+      description: >-
+        Concrete before/after migration output is the most useful thing you can
+        put here.
+      render: javascript
+
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Have you seen another tool handle this well?
+      description: >-
+        Django's makemigrations, Prisma Migrate, Drizzle Kit, TypeORM -- a
+        pointer to how they do it helps.

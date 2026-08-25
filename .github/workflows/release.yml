@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+# A second push while a release is in flight would race the version bump.
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  HUSKY: 0
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      # Required for npm provenance.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Changesets needs the history to work out what has landed since the last release.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          # `registry-url` is deliberately absent. Setting it makes setup-node write its own
+          # .npmrc that expects NODE_AUTH_TOKEN, and that file takes precedence over the one
+          # Changesets writes -- so publish runs with an empty token and fails with a
+          # confusing 404 rather than a 401.
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+      - uses: changesets/action@v2
+        with:
+          version: npm run changeset:version
+          publish: npm run changeset:publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
