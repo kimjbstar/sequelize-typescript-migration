@@ -21,7 +21,7 @@ jobs:
       pull-requests: write # open and update the "Version Packages" PR
       id-token: write # npm trusted publishing (OIDC)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Changesets needs the history to work out what has landed since the last release.
           fetch-depth: 0
