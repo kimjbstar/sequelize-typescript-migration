@@ -24,12 +24,15 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "test:integration": "jest --testPathPatterns=\\\\.integration\\\\.spec\\\\.ts$",
-    "prepublishOnly": "npm run build && npm test"
+    "test:integration": "jest -c jest.integration.config.js",
+    "prepublishOnly": "npm run build && npm test",
+    "lint:package": "publint --pack npm",
+    "verify:packed": "bash scripts/verify-packed-tarball.sh",
+    "prepare": "husky || true"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/kimjbstar/sequelize-typescript-migration.git"
+    "url": "git+https://github.com/kimjbstar/sequelize-typescript-migration.git"
   },
   "author": {
     "name": "kimjbstar",
@@ -49,12 +52,16 @@
     "@types/validator": "^13.12.0",
     "eslint": "^9.39.0",
     "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
     "jest": "^30.2.0",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.6.2",
+    "publint": "^0.3.24",
     "reflect-metadata": "^0.2.2",
     "rimraf": "^5.0.10",
     "sequelize": "^6.37.8",
     "sequelize-typescript": "^2.1.6",
+    "sqlite3": "^6.0.1",
     "ts-jest": "^29.4.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0"
@@ -63,9 +70,9 @@
     "node": ">=18.18.0"
   },
   "peerDependencies": {
+    "reflect-metadata": "*",
     "sequelize": "^6.37.0",
-    "sequelize-typescript": "^2.1.0",
-    "reflect-metadata": "*"
+    "sequelize-typescript": "^2.1.0"
   },
   "types": "dist/index.d.ts",
   "files": [
@@ -76,5 +83,6 @@
       "prettier --write",
       "eslint --fix"
     ]
-  }
+  },
+  "type": "commonjs"
 }
