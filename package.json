@@ -1,6 +1,6 @@
 {
   "name": "sequelize-typescript-migration",
-  "version": "0.0.1-beta.3",
+  "version": "1.0.0",
   "description": "migration tool for sequelize & typescript users",
   "keywords": [
     "sequelize",
