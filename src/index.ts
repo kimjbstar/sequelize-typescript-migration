@@ -1,144 +1,166 @@
-import { Sequelize } from "sequelize-typescript";
-import * as beautify from "js-beautify";
-import * as fs from "fs";
-import { IMigrationState } from "./constants";
-import { ModelCtor, Model, QueryInterface } from "sequelize/types";
-import getTablesFromModels from "./utils/getTablesFromModels";
-import getDiffActionsFromTables from "./utils/getDiffActionsFromTables";
-import getMigration from "./utils/getMigration";
-import createMigrationTable from "./utils/createMigrationTable";
-import getLastMigrationState from "./utils/getLastMigrationState";
-import writeMigration from "./utils/writeMigration";
+import { Sequelize } from 'sequelize-typescript'
+import beautify from 'js-beautify'
+import * as fs from 'fs'
+import { IMigrationState, ITables } from './constants'
+import type { Model, ModelStatic, QueryInterface } from 'sequelize'
+import getTablesFromModels from './utils/getTablesFromModels'
+import getDiffActionsFromTables from './utils/getDiffActionsFromTables'
+import getMigration from './utils/getMigration'
+import createMigrationTable from './utils/createMigrationTable'
+import getLastMigrationState from './utils/getLastMigrationState'
+import writeMigration from './utils/writeMigration'
+
+const STATE_TABLE = 'SequelizeMetaMigrations'
 
 export interface IMigrationOptions {
-  /**
-   * directory where migration file saved. We recommend that you specify this path to sequelize migration path.
-   */
-  outDir: string;
-  /**
-   * if true, it doesn't generate files but just prints result action.
-   */
-  preview?: boolean;
-  /**
-   * migration file name, default is "noname"
-   */
-  migrationName?: string;
-  /**
-   * comment of migration.
-   */
-  comment?: string;
-  debug?: boolean;
+	/**
+	 * directory where migration file saved. We recommend that you specify this path to sequelize migration path.
+	 */
+	outDir: string
+	/**
+	 * if true, it doesn't generate files but just prints result action.
+	 */
+	preview?: boolean
+	/**
+	 * migration file name, default is "noname"
+	 */
+	migrationName?: string
+	/**
+	 * comment of migration.
+	 */
+	comment?: string
+	debug?: boolean
 }
 
+/**
+ * Outcome of a makeMigration run.
+ *
+ * Discriminated on `status` so callers can branch without matching on message strings,
+ * and so "nothing to do" is an ordinary return value rather than a process exit.
+ */
+export type MigrationResult =
+	| { status: 'no-changes' }
+	| { status: 'preview'; up: string[]; down: string[] }
+	| { status: 'written'; filename: string; revision: number }
+
 export class SequelizeTypescriptMigration {
-  /**
-   * generates migration file including up, down code
-   * after this, run 'npx sequelize-cli db:migrate'.
-   * @param sequelize sequelize-typescript instance
-   * @param options options
-   */
-  public static makeMigration = async (
-    sequelize: Sequelize,
-    options: IMigrationOptions
-  ) => {
-    options.preview = options.preview || false;
-    if (fs.existsSync(options.outDir) === false) {
-      return Promise.reject({
-        msg: `${options.outDir} not exists. check path and if you did 'npx sequelize init' you must use path used in sequelize migration path`,
-      });
-    }
-    await sequelize.authenticate();
+	/**
+	 * generates migration file including up, down code
+	 * after this, run 'npx sequelize-cli db:migrate'.
+	 * @param sequelize sequelize-typescript instance
+	 * @param options options
+	 */
+	public static makeMigration = async (
+		sequelize: Sequelize,
+		options: IMigrationOptions,
+	): Promise<MigrationResult> => {
+		const isPreviewOnly = options.preview ?? false
 
-    const models: {
-      [key: string]: ModelCtor<Model>;
-    } = sequelize.models;
+		if (fs.existsSync(options.outDir) === false) {
+			throw new Error(
+				`${options.outDir} not exists. check path and if you did 'npx sequelize init' you must use path used in sequelize migration path`,
+			)
+		}
+		await sequelize.authenticate()
 
-    const queryInterface: QueryInterface = sequelize.getQueryInterface();
+		const models: {
+			[key: string]: ModelStatic<Model>
+		} = sequelize.models
 
-    await createMigrationTable(sequelize);
-    const lastMigrationState = await getLastMigrationState(sequelize);
+		const queryInterface: QueryInterface = sequelize.getQueryInterface()
 
-    const previousState: IMigrationState = {
-      revision:
-        lastMigrationState !== undefined ? lastMigrationState["revision"] : 0,
-      version:
-        lastMigrationState !== undefined ? lastMigrationState["version"] : 1,
-      tables:
-        lastMigrationState !== undefined ? lastMigrationState["tables"] : {},
-    };
-    const currentState: IMigrationState = {
-      revision: previousState.revision + 1,
-      tables: getTablesFromModels(sequelize, models),
-    };
+		// A preview is meant to be read-only, so the bookkeeping tables are only created
+		// on a run that will actually record state.
+		if (!isPreviewOnly) {
+			await createMigrationTable(sequelize)
+		}
+		const lastMigrationState = await getLastMigrationState(sequelize)
 
-    const upActions = getDiffActionsFromTables(
-      previousState.tables,
-      currentState.tables
-    );
-    const downActions = getDiffActionsFromTables(
-      currentState.tables,
-      previousState.tables
-    );
+		// The stored snapshot is JSON read back out of the database, so it arrives
+		// untyped. Missing fields fall back to the "nothing migrated yet" values.
+		const storedState = lastMigrationState as IMigrationState | undefined
 
-    const migration = getMigration(upActions);
-    const tmp = getMigration(downActions);
+		const previousState: Required<IMigrationState> = {
+			revision: storedState?.revision ?? 0,
+			version: storedState?.version ?? 1,
+			tables: storedState?.tables ?? ({} as ITables),
+		}
+		const currentState: Required<
+			Pick<IMigrationState, 'revision' | 'tables'>
+		> = {
+			revision: previousState.revision + 1,
+			tables: getTablesFromModels(sequelize, models),
+		}
 
-    migration.commandsDown = tmp.commandsUp;
+		const upActions = getDiffActionsFromTables(
+			previousState.tables,
+			currentState.tables,
+		)
+		const downActions = getDiffActionsFromTables(
+			currentState.tables,
+			previousState.tables,
+		)
 
-    if (migration.commandsUp.length === 0) {
-      console.log("No changes found");
-      process.exit(0);
-    }
+		const migration = getMigration(upActions)
+		migration.commandsDown = getMigration(downActions).commandsUp
 
-    // log
-    migration.consoleOut.forEach(v => {
-      console.log(`[Actions] ${v}`);
-    });
-    if (options.preview) {
-      console.log("Migration result:");
-      console.log(beautify(`[ \n${migration.commandsUp.join(", \n")} \n];\n`));
-      console.log("Undo commands:");
-      console.log(
-        beautify(`[ \n${migration.commandsDown.join(", \n")} \n];\n`)
-      );
-      return Promise.resolve({ msg: "success without save" });
-    }
+		if (migration.commandsUp.length === 0) {
+			console.log('No changes found')
+			return { status: 'no-changes' }
+		}
 
-    const info = await writeMigration(
-      currentState.revision,
-      migration,
-      options
-    );
+		migration.consoleOut.forEach((action) => {
+			console.log(`[Actions] ${action}`)
+		})
 
-    console.log(
-      `New migration to revision ${currentState.revision} has been saved to file '${info.filename}'`
-    );
+		if (isPreviewOnly) {
+			console.log('Migration result:')
+			console.log(
+				beautify(`[ \n${migration.commandsUp.join(', \n')} \n];\n`),
+			)
+			console.log('Undo commands:')
+			console.log(
+				beautify(`[ \n${migration.commandsDown.join(', \n')} \n];\n`),
+			)
+			return {
+				status: 'preview',
+				up: migration.commandsUp,
+				down: migration.commandsDown,
+			}
+		}
 
-    // save current state, Ugly hack, see https://github.com/sequelize/sequelize/issues/8310
-    const rows = [
-      {
-        revision: currentState.revision,
-        name: info.info.name,
-        state: JSON.stringify(currentState),
-      },
-    ];
+		const info = await writeMigration(
+			currentState.revision,
+			migration,
+			options,
+		)
 
-    try {
-      await queryInterface.bulkDelete("SequelizeMetaMigrations", {
-        revision: currentState.revision,
-      });
-      await queryInterface.bulkInsert("SequelizeMetaMigrations", rows);
+		console.log(
+			`New migration to revision ${currentState.revision} has been saved to file '${info.filename}'`,
+		)
 
-      console.log(`Use sequelize CLI:
-  npx sequelize db:migrate --to ${info.revisionNumber}-${
-        info.info.name
-      }.js ${`--migrations-path=${options.outDir}`} `);
+		// Recording the snapshot is not optional: every later run diffs against it, so a
+		// silent failure here would make the next migration re-emit changes that already
+		// exist. See https://github.com/sequelize/sequelize/issues/8310 for why this is
+		// stored in a table of our own rather than alongside SequelizeMeta.
+		await queryInterface.bulkDelete(STATE_TABLE, {
+			revision: currentState.revision,
+		})
+		await queryInterface.bulkInsert(STATE_TABLE, [
+			{
+				revision: currentState.revision,
+				name: info.info.name,
+				state: JSON.stringify(currentState),
+			},
+		])
 
-      return Promise.resolve({ msg: "success" });
-    } catch (err) {
-      if (options.debug) console.error(err);
-    }
+		console.log(`Use sequelize CLI:
+  npx sequelize db:migrate --to ${info.revisionNumber}-${info.info.name}.js --migrations-path=${options.outDir} `)
 
-    return Promise.resolve({ msg: "success anyway.." });
-  };
+		return {
+			status: 'written',
+			filename: info.filename,
+			revision: currentState.revision,
+		}
+	}
 }

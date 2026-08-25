@@ -1,40 +1,63 @@
-import * as fs from "fs";
+import * as fs from 'fs'
+import * as path from 'path'
+
+/**
+ * Deletes migration files already written for this revision, so re-running makeMigration
+ * replaces the previous attempt instead of piling up duplicates.
+ *
+ * Deleting is best effort: failing to clean up old files must never abort a run that has
+ * otherwise succeeded.
+ */
 export default function removeCurrentRevisionMigrations(
-  revision,
-  migrationsPath,
-  options
-): Promise<Boolean> {
-  // if old files can't be deleted, we won't stop the execution
+	revision: number,
+	migrationsPath: string,
+	options: { keepFiles?: boolean; verbose?: boolean; debug?: boolean },
+): boolean {
+	if (options.keepFiles) {
+		return false
+	}
 
-  return new Promise<Boolean>((resolve, reject) => {
-    if (options.keepFiles) {
-      resolve(false);
-    }
-    try {
-      const files: String[] = fs.readdirSync(migrationsPath);
-      if (files.length === 0) {
-        resolve(false);
-      }
+	let files: string[]
+	try {
+		files = fs.readdirSync(migrationsPath)
+	} catch (err) {
+		if (options.debug) {
+			console.error(`Failed to read migrations directory: ${err}`)
+		}
+		return false
+	}
 
-      let i = 0;
-      files.forEach(file => {
-        i += 1;
-        if (file.split("-")[0] === revision.toString()) {
-          fs.unlinkSync(`${migrationsPath}/${file}`);
-          if (options.verbose) {
-            console.log(`Successfully deleted ${file}`);
-            resolve(true);
-          }
-        }
-        if (i === files.length) {
-          resolve(false);
-        }
-      });
-    } catch (err) {
-      // if (options.debug) console.error(`Can't read dir: ${err}`);
-      // console.log(`Failed to delete mig file: ${error}`);
-      if (options.debug) console.error(`에러발생: ${err}`);
-      resolve(false);
-    }
-  });
+	let hasRemoved = false
+
+	for (const file of files) {
+		if (!isSameRevision(file, revision)) {
+			continue
+		}
+
+		try {
+			fs.unlinkSync(path.join(migrationsPath, file))
+			hasRemoved = true
+			if (options.verbose) {
+				console.log(`Successfully deleted ${file}`)
+			}
+		} catch (err) {
+			if (options.debug) {
+				console.error(`Failed to delete migration file ${file}: ${err}`)
+			}
+		}
+	}
+
+	return hasRemoved
+}
+
+/**
+ * Compares numerically, not as strings.
+ *
+ * Filenames are written zero-padded ("00000001-name.js") while the revision is a plain
+ * number, so the previous `file.split('-')[0] === revision.toString()` compared
+ * "00000001" against "1" and never matched -- meaning nothing was ever deleted.
+ */
+function isSameRevision(filename: string, revision: number): boolean {
+	const fileRevision = Number.parseInt(filename.split('-')[0], 10)
+	return !Number.isNaN(fileRevision) && fileRevision === revision
 }

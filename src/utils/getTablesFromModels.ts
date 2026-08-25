@@ -1,94 +1,123 @@
-import { Sequelize } from "sequelize-typescript";
-import { ModelCtor, Model, ModelAttributeColumnOptions } from "sequelize/types";
-import reverseSequelizeColType from "./reverseSequelizeColType";
-import reverseSequelizeDefValueType from "./reverseSequelizeDefValueType";
-import parseIndex from "./parseIndex";
+import { Sequelize } from 'sequelize-typescript'
+import type { Model, ModelAttributeColumnOptions, ModelStatic } from 'sequelize'
+import type { IColumnSnapshot, ITableSnapshot, ITables } from '../constants'
+import readModelAttributes from '../adapters/readModelAttributes'
+import readModelIndexes from '../adapters/readModelIndexes'
+import reverseSequelizeColType from './reverseSequelizeColType'
+import reverseSequelizeDefValueType from './reverseSequelizeDefValueType'
+import parseIndex from './parseIndex'
 
-export default function reverseModels(
-  sequelize: Sequelize,
-  models: {
-    [key: string]: ModelCtor<Model>;
-  }
+/** Attribute keys copied verbatim from the model definition into the snapshot. */
+const COPIED_ATTRIBUTE_KEYS = [
+	'allowNull',
+	'defaultValue',
+	'unique',
+	'primaryKey',
+	'autoIncrement',
+	'autoIncrementIdentity',
+	'comment',
+	'references',
+	'onUpdate',
+	'onDelete',
+	'validate',
+]
+
+/**
+ * Turns live models into the serializable table snapshot that the differ compares
+ * against the previously stored one.
+ */
+export default function getTablesFromModels(
+	sequelize: Sequelize,
+	models: {
+		[key: string]: ModelStatic<Model>
+	},
 ) {
-  const tables = {};
-  for (let [modelKey, model] of Object.entries(models)) {
-    const attributes: {
-      [key: string]: ModelAttributeColumnOptions;
-    } = model.rawAttributes;
+	const tables: ITables = {}
 
-    const resultAttributes = {};
+	for (const model of Object.values(models)) {
+		tables[model.tableName] = {
+			tableName: model.tableName,
+			schema: buildSchema(sequelize, model),
+			indexes: buildIndexes(model),
+		}
+	}
 
-    for (let [column, attribute] of Object.entries(attributes)) {
-      let rowAttribute = {};
+	return tables
+}
 
-      if (attribute.defaultValue) {
-        const _val = reverseSequelizeDefValueType(attribute.defaultValue);
-        if (_val.notSupported) {
-          console.log(
-            `[Not supported] Skip defaultValue column of attribute ${model}:${column}`
-          );
-          continue;
-        }
-        rowAttribute["defaultValue"] = _val;
-      }
+function buildSchema(
+	sequelize: Sequelize,
+	model: ModelStatic<Model>,
+): Record<string, IColumnSnapshot> {
+	const attributes: {
+		[key: string]: ModelAttributeColumnOptions
+	} = readModelAttributes(model)
 
-      if (attribute.type === undefined) {
-        console.log(
-          `[Not supported] Skip column with undefined type ${model}:${column}`
-        );
-        continue;
-      }
+	const schema: Record<string, IColumnSnapshot> = {}
 
-      const seqType: string = reverseSequelizeColType(
-        sequelize,
-        attribute.type
-      );
-      if (seqType === "Sequelize.VIRTUAL") {
-        console.log(
-          `[SKIP] Skip Sequelize.VIRTUAL column "${column}"", defined in model "${model}"`
-        );
-        continue;
-      }
+	for (const [column, attribute] of Object.entries(attributes)) {
+		if (attribute.type === undefined) {
+			console.log(
+				`[Not supported] Skip column with undefined type ${model.name}:${column}`,
+			)
+			continue
+		}
 
-      rowAttribute = {
-        seqType: seqType,
-      };
+		const seqType: string = reverseSequelizeColType(
+			sequelize,
+			attribute.type,
+		)
+		if (seqType === 'Sequelize.VIRTUAL') {
+			console.log(
+				`[SKIP] Skip Sequelize.VIRTUAL column "${column}", defined in model "${model.name}"`,
+			)
+			continue
+		}
 
-      [
-        "allowNull",
-        "unique",
-        "primaryKey",
-        "autoIncrement",
-        "autoIncrementIdentity",
-        "comment",
-        "references",
-        "onUpdate",
-        "onDelete",
-        "validate",
-      ].forEach(key => {
-        if (attribute[key] !== undefined) {
-          rowAttribute[key] = attribute[key];
-        }
-      });
+		const rowAttribute: IColumnSnapshot = { seqType }
 
-      resultAttributes[column] = rowAttribute;
-    } // attributes in model
+		const source = attribute as unknown as Record<string, unknown>
+		const target = rowAttribute as unknown as Record<string, unknown>
+		COPIED_ATTRIBUTE_KEYS.forEach((key) => {
+			if (source[key] !== undefined) {
+				target[key] = source[key]
+			}
+		})
 
-    tables[model.tableName] = {
-      tableName: model.tableName,
-      schema: resultAttributes,
-    };
+		// Overwrites the raw value copied above with its reproducible form: a literal
+		// stays a literal, while `DataType.NOW` or `fn(...)` becomes source code the
+		// generated migration can evaluate.
+		//
+		// A `!= null` check, not a truthy one -- `@Default(false)` and `@Default(0)`
+		// are real defaults and used to be dropped before ever reaching the reverser.
+		if (attribute.defaultValue != null) {
+			const defaultValue = reverseSequelizeDefValueType(
+				attribute.defaultValue,
+			)
+			if (defaultValue.notSupported) {
+				console.log(
+					`[Not supported] Skip defaultValue of attribute ${model.name}:${column}`,
+				)
+				delete rowAttribute.defaultValue
+			} else {
+				rowAttribute.defaultValue = defaultValue
+			}
+		}
 
-    let idx_out = {};
-    if (model.options.indexes.length > 0) {
-      for (const _i in model.options.indexes) {
-        const index = parseIndex(model.options.indexes[_i]);
-        idx_out[`${index["hash"]}`] = index;
-        delete index["hash"];
-      }
-    }
-    tables[model.tableName].indexes = idx_out;
-  } // model in models
+		schema[column] = rowAttribute
+	}
 
-  return tables;
+	return schema
+}
+
+function buildIndexes(model: ModelStatic<Model>): ITableSnapshot['indexes'] {
+	const indexesByHash: ITableSnapshot['indexes'] = {}
+
+	readModelIndexes(model).forEach((index) => {
+		const parsed = parseIndex(index)
+		indexesByHash[`${parsed.hash}`] = parsed
+		delete parsed.hash
+	})
+
+	return indexesByHash
 }
