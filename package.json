@@ -44,7 +44,7 @@
   "license": "MIT",
   "dependencies": {
     "deep-diff": "^1.0.2",
-    "js-beautify": "^1.15.4"
+    "js-beautify": "^2.0.3"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.0",
