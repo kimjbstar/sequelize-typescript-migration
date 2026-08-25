@@ -262,6 +262,10 @@ Specifically:
   shape of the object that described them, which stops a reordered decorator from looking
   like a schema change. The one-time cost is that existing indexes are re-created on the
   first run after upgrading.
+- **`underscored: true` and explicit `field` names now work.** Migrations were generated
+  against attribute names rather than column names, so a model with `underscored: true`
+  produced a table of camelCase columns that the model itself could not find. If you use
+  either, your previous migrations named the wrong columns.
 - **`makeMigration` no longer calls `process.exit`.** If you relied on the process ending
   when there was nothing to do, check for `status === 'no-changes'` instead.
 - **Failures now throw.** A missing `outDir`, or a failure to record the snapshot, used to be

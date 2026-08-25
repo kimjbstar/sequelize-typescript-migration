@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize-typescript'
 import getTablesFromModels from './getTablesFromModels'
-import { Organization, User } from '../fixtures/models'
+import { AuditEntry, Organization, User } from '../fixtures/models'
 
 /**
  * `validateOnly: true` builds a fully initialised Sequelize against a dummy dialect: no
@@ -10,7 +10,7 @@ import { Organization, User } from '../fixtures/models'
 const tablesOf = () => {
 	const sequelize = new Sequelize({
 		validateOnly: true,
-		models: [Organization, User],
+		models: [Organization, User, AuditEntry],
 	})
 	return getTablesFromModels(sequelize, sequelize.models)
 }
@@ -28,6 +28,7 @@ describe('getTablesFromModels', () => {
 	describe('table shape', () => {
 		it('모델마다 테이블명을 키로 하는 항목을 만든다', () => {
 			expect(Object.keys(tablesOf()).sort()).toEqual([
+				'audit_entries',
 				'organizations',
 				'users',
 			])
@@ -222,6 +223,60 @@ describe('getTablesFromModels', () => {
 				'createdAt',
 				'updatedAt',
 			])
+		})
+	})
+
+	describe('column names', () => {
+		// Regression: the snapshot was keyed by attribute name, so a model with
+		// `underscored: true` generated a table of camelCase columns that the model itself
+		// could then not find. Sequelize already resolves this onto `attribute.field`, in
+		// both v6 and v7, so there is nothing to infer and no option to expose.
+		const auditSchema = () => tablesOf()['audit_entries'].schema
+
+		it('underscored 모델의 컬럼명을 snake_case로 쓴다', () => {
+			expect(Object.keys(auditSchema())).toEqual([
+				'id',
+				'actor_name',
+				'event_type',
+				'raw_payload',
+				'created_at',
+				'updated_at',
+			])
+		})
+
+		it('attribute 이름은 스키마에 남기지 않는다', () => {
+			expect(auditSchema()).not.toHaveProperty('actorName')
+			expect(auditSchema()).not.toHaveProperty('eventType')
+		})
+
+		it('명시적 field 지정도 컬럼명으로 쓴다', () => {
+			// `payload` with field: 'raw_payload' -- the same bug without `underscored`.
+			expect(auditSchema()['raw_payload'].seqType).toBe(
+				'Sequelize.STRING(200)',
+			)
+			expect(auditSchema()).not.toHaveProperty('payload')
+		})
+
+		it('컬럼 속성은 그대로 보존한다', () => {
+			expect(auditSchema()['actor_name']).toMatchObject({
+				seqType: 'Sequelize.STRING(120)',
+				allowNull: false,
+			})
+		})
+
+		it('인덱스 필드도 컬럼명으로 바꾼다', () => {
+			// An index declared on `actorName` has to be created on `actor_name`.
+			const indexes = Object.values(
+				tablesOf()['audit_entries'].indexes,
+			) as Array<{ fields?: unknown[] }>
+
+			expect(indexes).toHaveLength(1)
+			expect(indexes[0].fields).toEqual(['actor_name'])
+		})
+
+		it('매핑이 없는 모델은 그대로 둔다', () => {
+			// Without `underscored` or an explicit field, column name equals attribute name.
+			expect(Object.keys(userSchema())).toContain('organizationId')
 		})
 	})
 

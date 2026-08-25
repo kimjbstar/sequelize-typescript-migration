@@ -42,9 +42,11 @@ const Sequelize = require('sequelize');
  *
  * createTable "organizations", deps: []
  * createTable "users", deps: [organizations]
+ * createTable "audit_entries", deps: []
  * addIndex "idx_org_slug" to table "organizations"
  * addIndex "idx_users_email" to table "users"
  * addIndex "users_nickname" to table "users"
+ * addIndex "idx_audit_actor" to table "audit_entries"
  *
  **/
 
@@ -163,6 +165,39 @@ const migrationCommands = [
             {}
         ]
     },
+
+    {
+        fn: "createTable",
+        params: [
+            "audit_entries",
+            {
+                "id": {
+                    "autoIncrement": true,
+                    "primaryKey": true,
+                    "type": Sequelize.INTEGER
+                },
+                "actor_name": {
+                    "allowNull": false,
+                    "type": Sequelize.STRING(120)
+                },
+                "event_type": {
+                    "type": Sequelize.STRING(40)
+                },
+                "raw_payload": {
+                    "type": Sequelize.STRING(200)
+                },
+                "created_at": {
+                    "allowNull": false,
+                    "type": Sequelize.DATE
+                },
+                "updated_at": {
+                    "allowNull": false,
+                    "type": Sequelize.DATE
+                }
+            },
+            {}
+        ]
+    },
     {
         fn: "addIndex",
         params: [
@@ -194,10 +229,24 @@ const migrationCommands = [
                 "indexName": "users_nickname"
             }
         ]
+    },
+    {
+        fn: "addIndex",
+        params: [
+            "audit_entries",
+            ["actor_name"],
+            {
+                "indexName": "idx_audit_actor"
+            }
+        ]
     }
 ];
 
 const rollbackCommands = [{
+        fn: "dropTable",
+        params: ["audit_entries"]
+    },
+    {
         fn: "dropTable",
         params: ["users"]
     },
@@ -236,14 +285,17 @@ exports[`golden: models to migration file initial migration (empty database) 사
 [
   "createTable "organizations", deps: []",
   "createTable "users", deps: [organizations]",
+  "createTable "audit_entries", deps: []",
   "addIndex "idx_org_slug" to table "organizations"",
   "addIndex "idx_users_email" to table "users"",
   "addIndex "users_nickname" to table "users"",
+  "addIndex "idx_audit_actor" to table "audit_entries"",
 ]
 `;
 
 exports[`golden: models to migration file initial migration (empty database) 전체 스키마에 대한 down 커맨드를 만든다 1`] = `
 [
+  "{ fn: "dropTable", params: ["audit_entries"] }",
   "{ fn: "dropTable", params: ["users"] }",
   "{ fn: "dropTable", params: ["organizations"] }",
 ]
@@ -286,6 +338,19 @@ exports[`golden: models to migration file initial migration (empty database) 전
      },
 {}
 ] }",
+  "
+{ fn: "createTable", params: [
+"audit_entries",
+ { 
+      "id": { "autoIncrement":true, "primaryKey":true, "type": Sequelize.INTEGER }, 
+      "actor_name": { "allowNull":false, "type": Sequelize.STRING(120) }, 
+      "event_type": { "type": Sequelize.STRING(40) }, 
+      "raw_payload": { "type": Sequelize.STRING(200) }, 
+      "created_at": { "allowNull":false, "type": Sequelize.DATE }, 
+      "updated_at": { "allowNull":false, "type": Sequelize.DATE }
+     },
+{}
+] }",
   "{ fn: "addIndex", params: [
     "organizations",
     ["slug"],
@@ -301,11 +366,56 @@ exports[`golden: models to migration file initial migration (empty database) 전
     ["nickname"],
     {"indexName":"users_nickname"}
 ] }",
+  "{ fn: "addIndex", params: [
+    "audit_entries",
+    ["actor_name"],
+    {"indexName":"idx_audit_actor"}
+] }",
 ]
 `;
 
 exports[`golden: models to migration file table snapshot itself 모델에서 뽑아낸 테이블 스냅샷을 고정한다 1`] = `
 {
+  "audit_entries": {
+    "indexes": {
+      "80048489fa4163d5a29b1948933293a09d100e7d": {
+        "fields": [
+          "actor_name",
+        ],
+        "name": "idx_audit_actor",
+        "options": {
+          "indexName": "idx_audit_actor",
+        },
+        "type": "",
+      },
+    },
+    "schema": {
+      "actor_name": {
+        "allowNull": false,
+        "seqType": "Sequelize.STRING(120)",
+      },
+      "created_at": {
+        "allowNull": false,
+        "seqType": "Sequelize.DATE",
+      },
+      "event_type": {
+        "seqType": "Sequelize.STRING(40)",
+      },
+      "id": {
+        "autoIncrement": true,
+        "primaryKey": true,
+        "seqType": "Sequelize.INTEGER",
+      },
+      "raw_payload": {
+        "seqType": "Sequelize.STRING(200)",
+      },
+      "updated_at": {
+        "allowNull": false,
+        "seqType": "Sequelize.DATE",
+      },
+    },
+    "tableName": "audit_entries",
+  },
   "organizations": {
     "indexes": {
       "4154fa2ebc29f4f4d2d5b7189cd6a2e88fdf2db2": {

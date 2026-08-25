@@ -79,6 +79,12 @@ dependency and the FK ordering is never exercised.
 to register the attribute before `@PrimaryKey` can annotate it. Applying them by hand (as the
 packed-tarball smoke test does) means calling `Column(...)` first.
 
+**An attribute name is not a column name.** With `underscored: true` or an explicit
+`field`, the attribute is `firstName` while the column is `first_name`. Sequelize resolves
+this onto `attribute.field` (both v6 and v7), and everything written into a migration --
+schema keys and index field lists alike -- has to be the column name. Generating attribute
+names produces a table the model cannot read.
+
 **ts-jest does not type check.** It transpiles. `npm run typecheck` is the only thing that
 reads the specs' types, which is why `tsconfig.json` includes them and `tsconfig.build.json`
 excludes them.

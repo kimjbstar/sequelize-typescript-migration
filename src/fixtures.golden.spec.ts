@@ -6,7 +6,7 @@ import getDiffActionsFromTables from './utils/getDiffActionsFromTables'
 import getMigration from './utils/getMigration'
 import writeMigration from './utils/writeMigration'
 import type { ITables } from './constants'
-import { Organization, User } from './fixtures/models'
+import { AuditEntry, Organization, User } from './fixtures/models'
 
 /**
  * End-to-end golden test: models -> table snapshot -> diff -> commands -> migration file.
@@ -35,7 +35,7 @@ afterEach(() => {
 const buildTables = () => {
 	const sequelize = new Sequelize({
 		validateOnly: true,
-		models: [Organization, User],
+		models: [Organization, User, AuditEntry],
 	})
 	return getTablesFromModels(sequelize, sequelize.models)
 }

@@ -1,9 +1,17 @@
 import { Sequelize } from 'sequelize-typescript'
-import type { Model, ModelAttributeColumnOptions, ModelStatic } from 'sequelize'
+import type {
+	IndexesOptions,
+	Model,
+	ModelAttributeColumnOptions,
+	ModelStatic,
+} from 'sequelize'
 import type { IColumnSnapshot, ITableSnapshot, ITables } from '../constants'
 import listModels from '../adapters/listModels'
 import { getMigrationRuntime, getSequelizeMajor } from '../adapters/version'
-import readModelAttributes from '../adapters/readModelAttributes'
+import readModelAttributes, {
+	buildColumnNameMap,
+	getColumnName,
+} from '../adapters/readModelAttributes'
 import readModelIndexes from '../adapters/readModelIndexes'
 import reverseSequelizeColType from './reverseSequelizeColType'
 import reverseSequelizeDefValueType from './reverseSequelizeDefValueType'
@@ -38,10 +46,12 @@ export default function getTablesFromModels(
 	const { prefix } = getMigrationRuntime(getSequelizeMajor(sequelize))
 
 	for (const model of listModels(sequelize, models)) {
+		const columnNames = buildColumnNameMap(readModelAttributes(model))
+
 		tables[model.tableName] = {
 			tableName: model.tableName,
 			schema: buildSchema(sequelize, model, prefix),
-			indexes: buildIndexes(model),
+			indexes: buildIndexes(model, columnNames),
 		}
 	}
 
@@ -110,20 +120,54 @@ function buildSchema(
 			}
 		}
 
-		schema[column] = rowAttribute
+		schema[getColumnName(attribute, column)] = rowAttribute
 	}
 
 	return schema
 }
 
-function buildIndexes(model: ModelStatic<Model>): ITableSnapshot['indexes'] {
+function buildIndexes(
+	model: ModelStatic<Model>,
+	columnNames: Map<string, string>,
+): ITableSnapshot['indexes'] {
 	const indexesByHash: ITableSnapshot['indexes'] = {}
 
 	readModelIndexes(model).forEach((index) => {
-		const parsed = parseIndex(index)
+		const parsed = parseIndex(withColumnNames(index, columnNames))
 		indexesByHash[`${parsed.hash}`] = parsed
 		delete parsed.hash
 	})
 
 	return indexesByHash
+}
+
+/**
+ * Index field lists name attributes, not columns -- an index on `emailAddress` has to be
+ * created on `email_address`. Translated before parsing so the index hash is derived from
+ * what actually reaches the database.
+ */
+function withColumnNames(
+	index: IndexesOptions,
+	columnNames: Map<string, string>,
+): IndexesOptions {
+	if (!index.fields) {
+		return index
+	}
+
+	return {
+		...index,
+		fields: index.fields.map((field) => {
+			if (typeof field === 'string') {
+				return columnNames.get(field) ?? field
+			}
+			if (field && typeof field === 'object' && 'name' in field) {
+				const named = field as { name: string }
+				return {
+					...field,
+					name: columnNames.get(named.name) ?? named.name,
+				}
+			}
+			return field
+		}),
+	}
 }

@@ -49,6 +49,34 @@ export class Organization extends Model {
 	declare users: User[]
 }
 
+/**
+ * Exercises the column-name mapping: `underscored: true` means every attribute maps to a
+ * snake_case column, and migrations have to name the column.
+ */
+@Table({
+	tableName: 'audit_entries',
+	underscored: true,
+	timestamps: true,
+	indexes: [{ name: 'idx_audit_actor', fields: ['actorName'] }],
+})
+export class AuditEntry extends Model {
+	@PrimaryKey
+	@AutoIncrement
+	@Column(DataType.INTEGER)
+	declare id: number
+
+	@AllowNull(false)
+	@Column(DataType.STRING(120))
+	declare actorName: string
+
+	@Column(DataType.STRING(40))
+	declare eventType: string
+
+	// An explicit field name, which has the same effect without `underscored`.
+	@Column({ type: DataType.STRING(200), field: 'raw_payload' })
+	declare payload: string
+}
+
 @Table({
 	tableName: 'users',
 	// One named index and one unnamed one: Sequelize fills in "users_nickname" for the

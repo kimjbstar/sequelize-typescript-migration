@@ -34,6 +34,24 @@ class Author extends Model {
 	declare name: string
 }
 
+@Table({
+	tableName: 'audit_log',
+	underscored: true,
+	timestamps: false,
+	indexes: [{ name: 'idx_audit_log_actor', fields: ['actorName'] }],
+})
+class AuditLog extends Model {
+	@PrimaryKey
+	@Column(DataType.INTEGER)
+	declare id: number
+
+	@Column(DataType.STRING(120))
+	declare actorName: string
+
+	@Column({ type: DataType.STRING(200), field: 'raw_payload' })
+	declare payload: string
+}
+
 @Table({ tableName: 'books', timestamps: false })
 class Book extends Model {
 	@PrimaryKey
@@ -66,7 +84,7 @@ beforeEach(async () => {
 		dialect: 'sqlite',
 		storage: ':memory:',
 		logging: false,
-		models: [Author, Book],
+		models: [Author, Book, AuditLog],
 	})
 	await sequelize.authenticate()
 })
@@ -225,6 +243,41 @@ describe('end to end against sqlite', () => {
 			expect(rows).toHaveLength(1)
 			expect(rows[0].revision).toBe(1)
 			expect(JSON.parse(rows[0].state)).toHaveProperty('tables.books')
+		})
+	})
+
+	describe('underscored models', () => {
+		// The bug this guards: the snapshot was keyed by attribute name, so a model with
+		// `underscored: true` produced a table of camelCase columns that the model itself
+		// could not then find.
+		it('실제 테이블이 snake_case 컬럼으로 만들어진다', async () => {
+			const result = await makeMigration()
+			await runUp((result as { filename: string }).filename)
+
+			const described = await sequelize
+				.getQueryInterface()
+				.describeTable('audit_log')
+
+			expect(Object.keys(described).sort()).toEqual([
+				'actor_name',
+				'id',
+				'raw_payload',
+			])
+		})
+
+		it('모델이 만들어진 테이블을 실제로 읽을 수 있다', async () => {
+			// The real proof: if the columns were named wrong, this query fails.
+			const result = await makeMigration()
+			await runUp((result as { filename: string }).filename)
+
+			await AuditLog.create({
+				id: 1,
+				actorName: 'someone',
+				payload: '{}',
+			})
+			const found = await AuditLog.findByPk(1)
+
+			expect(found?.actorName).toBe('someone')
 		})
 	})
 
