@@ -92,6 +92,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Service containers publish on the default ports. test/docker-compose.yml
+      # offsets them locally so it never collides with a developer's own servers,
+      # which is why these values are set explicitly rather than defaulted.
       - run: npm run test:integration
         env:
           MYSQL_HOST: 127.0.0.1

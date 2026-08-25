@@ -1,0 +1,38 @@
+# Local databases for `npm run test:integration`.
+#
+# Ports are deliberately offset from the defaults so this never collides with a MySQL or
+# Postgres you already run. The integration tests read the same offsets from
+# test/.env.integration.
+#
+#   docker compose -f test/docker-compose.yml up -d
+#   npm run test:integration
+#   docker compose -f test/docker-compose.yml down -v
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: local_test_password
+      MYSQL_DATABASE: test_migration
+    ports:
+      - '33306:3306'
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres:
+    # postgis rather than plain postgres: the GEOMETRY and GEOGRAPHY branches of the type
+    # reverser need the extension available.
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_PASSWORD: local_test_password
+      POSTGRES_DB: test_migration
+    ports:
+      - '55432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 20
