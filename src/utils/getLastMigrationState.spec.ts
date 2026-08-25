@@ -13,11 +13,15 @@ type RecordedQuery = { sql: string; options: Record<string, unknown> }
 const stubSequelize = (
 	responses: unknown[][],
 	dialect = 'mysql',
+	existingTables: string[] = ['SequelizeMeta', 'SequelizeMetaMigrations'],
 ): { sequelize: Sequelize; queries: RecordedQuery[] } => {
 	const queries: RecordedQuery[] = []
 	let call = 0
 	const sequelize = {
 		getDialect: () => dialect,
+		getQueryInterface: () => ({
+			showAllTables: () => Promise.resolve(existingTables),
+		}),
 		query: (sql: string, options: Record<string, unknown>) => {
 			queries.push({ sql, options })
 			return Promise.resolve(responses[call++] ?? [])
@@ -89,6 +93,76 @@ describe('getLastMigrationState', () => {
 			await getLastMigrationState(sequelize)
 
 			expect(queries[1].options.replacements).toEqual({ revision: -1 })
+		})
+	})
+
+	describe('state column parsing', () => {
+		// Regression: the column is declared JSON, but only some dialects hand it back
+		// parsed. MySQL does; SQLite has no JSON type and returns the raw string. Reading
+		// that string as an object yields undefined for every field, so the tool believed
+		// nothing had ever been migrated and re-emitted the whole schema on every run.
+		it('문자열로 돌아온 상태를 객체로 파싱한다', async () => {
+			const state = { revision: 3, version: 1, tables: { users: {} } }
+			const { sequelize } = stubSequelize([
+				[{ name: '00000003-x' }],
+				[{ state: JSON.stringify(state) }],
+			])
+
+			await expect(getLastMigrationState(sequelize)).resolves.toEqual(
+				state,
+			)
+		})
+
+		it('이미 객체인 상태는 그대로 반환한다', async () => {
+			const state = { revision: 3, version: 1, tables: {} }
+			const { sequelize } = stubSequelize([
+				[{ name: '00000003-x' }],
+				[{ state }],
+			])
+
+			await expect(getLastMigrationState(sequelize)).resolves.toBe(state)
+		})
+
+		it('망가진 JSON이면 조용히 넘어가지 않고 예외를 던진다', async () => {
+			// Diffing against garbage would generate a migration that drops everything.
+			const { sequelize } = stubSequelize([
+				[{ name: '00000003-x' }],
+				[{ state: '{ not json' }],
+			])
+
+			await expect(getLastMigrationState(sequelize)).rejects.toThrow(
+				/not valid JSON/,
+			)
+		})
+	})
+
+	describe('missing bookkeeping tables', () => {
+		// A preview run deliberately skips creating these tables so that "show me what
+		// would change" stays read-only. Querying them anyway failed with "no such table".
+		it('부기 테이블이 없으면 undefined를 반환한다', async () => {
+			const { sequelize } = stubSequelize([[], []], 'sqlite', [])
+
+			await expect(
+				getLastMigrationState(sequelize),
+			).resolves.toBeUndefined()
+		})
+
+		it('부기 테이블이 없으면 조회를 시도하지 않는다', async () => {
+			const { sequelize, queries } = stubSequelize([[], []], 'sqlite', [])
+
+			await getLastMigrationState(sequelize)
+
+			expect(queries).toEqual([])
+		})
+
+		it('둘 중 하나만 있어도 조회하지 않는다', async () => {
+			const { sequelize, queries } = stubSequelize([[], []], 'sqlite', [
+				'SequelizeMeta',
+			])
+
+			await getLastMigrationState(sequelize)
+
+			expect(queries).toEqual([])
 		})
 	})
 

@@ -13,6 +13,13 @@ const NO_REVISION = -1
  * or undefined when there is none.
  */
 export default async function getLastMigrationState(sequelize: Sequelize) {
+	// No bookkeeping table means nothing has ever been migrated. Checking rather than
+	// letting the SELECT fail matters for preview runs, which deliberately skip creating
+	// these tables so that "show me what would change" stays read-only.
+	if (!(await hasBookkeepingTables(sequelize))) {
+		return undefined
+	}
+
 	const dialect = getDialect(sequelize)
 	const metaTable = quoteTableName(dialect, META_TABLE)
 	const stateTable = quoteTableName(dialect, STATE_TABLE)
@@ -31,7 +38,52 @@ export default async function getLastMigrationState(sequelize: Sequelize) {
 		{ type: QueryTypes.SELECT, replacements: { revision: lastRevision } },
 	)
 
-	return lastMigration ? lastMigration.state : undefined
+	if (!lastMigration) {
+		return undefined
+	}
+
+	return parseState(lastMigration.state)
+}
+
+/**
+ * The state column is declared as JSON, but only some dialects hand it back parsed.
+ * MySQL does; SQLite has no JSON type and returns the raw string, and Postgres depends
+ * on the column type it ended up with. Reading the string as an object silently yields
+ * undefined for every field, which makes the tool believe nothing was ever migrated and
+ * re-emit the entire schema on every run.
+ */
+function parseState(state: unknown): unknown {
+	if (typeof state !== 'string') {
+		return state
+	}
+
+	try {
+		return JSON.parse(state)
+	} catch {
+		// A snapshot we cannot read is worse than none: continuing would diff against
+		// garbage and generate a migration that drops everything.
+		throw new Error(
+			'Stored migration state is not valid JSON. The SequelizeMetaMigrations table ' +
+				'may have been modified outside this tool.',
+		)
+	}
+}
+
+/**
+ * Uses showAllTables rather than catching the query error, because every dialect words
+ * "missing table" differently and swallowing errors by message would also hide genuine
+ * connection and permission failures.
+ */
+async function hasBookkeepingTables(sequelize: Sequelize): Promise<boolean> {
+	const tables = await sequelize.getQueryInterface().showAllTables()
+	const names = tables.map((table) =>
+		(typeof table === 'string' ? table : String(table)).toLowerCase(),
+	)
+
+	return (
+		names.includes(META_TABLE.toLowerCase()) &&
+		names.includes(STATE_TABLE.toLowerCase())
+	)
 }
 
 /**

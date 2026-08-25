@@ -61,6 +61,11 @@ const stubSequelize = (
 	}) as unknown as Sequelize['query']
 
 	sequelize.getQueryInterface = (() => ({
+		// getLastMigrationState checks for the bookkeeping tables before querying them,
+		// so the stub has to answer that too. Reporting them present keeps the stored
+		// state path exercised.
+		showAllTables: () =>
+			Promise.resolve(['SequelizeMeta', 'SequelizeMetaMigrations']),
 		createTable: (name: string) => {
 			createdTables.push(name)
 			return Promise.resolve()
