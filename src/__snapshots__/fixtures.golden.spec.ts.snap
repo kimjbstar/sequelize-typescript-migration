@@ -1,0 +1,454 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`golden: models to migration file incremental migrations 컬럼 삭제는 removeColumn 하나만 만든다 1`] = `
+[
+  "{ fn: "removeColumn", params: ["users", "bio"] }",
+]
+`;
+
+exports[`golden: models to migration file incremental migrations 컬럼 추가는 addColumn 하나만 만든다 1`] = `
+[
+  "{ fn: "addColumn", params: [
+    "users",
+    "phone",
+    { "allowNull":true, "type": Sequelize.STRING(20) }
+] }",
+]
+`;
+
+exports[`golden: models to migration file incremental migrations 타입 변경은 changeColumn을 만든다 1`] = `
+[
+  "{ fn: "changeColumn", params: [
+    "users",
+    "nickname",
+    { "comment":"display name", "type": Sequelize.STRING(64) }
+] }",
+]
+`;
+
+exports[`golden: models to migration file incremental migrations 테이블 삭제는 dropTable을 만든다 1`] = `
+[
+  "{ fn: "dropTable", params: ["users"] }",
+]
+`;
+
+exports[`golden: models to migration file initial migration (empty database) 마이그레이션 파일 전문을 만든다 1`] = `
+"'use strict';
+
+const Sequelize = require('sequelize');
+
+/**
+ * Actions summary:
+ *
+ * createTable "organizations", deps: []
+ * createTable "users", deps: [organizations]
+ * addIndex "idx_org_slug" to table "organizations"
+ * addIndex "idx_users_email" to table "users"
+ * addIndex "users_nickname" to table "users"
+ *
+ **/
+
+const info = {
+    "revision": 1,
+    "name": "initial",
+    "created": "<timestamp>",
+    "comment": ""
+};
+
+const migrationCommands = [
+
+    {
+        fn: "createTable",
+        params: [
+            "organizations",
+            {
+                "id": {
+                    "autoIncrement": true,
+                    "primaryKey": true,
+                    "type": Sequelize.INTEGER
+                },
+                "name": {
+                    "unique": true,
+                    "allowNull": false,
+                    "type": Sequelize.STRING(100)
+                },
+                "slug": {
+                    "allowNull": false,
+                    "type": Sequelize.STRING(50)
+                },
+                "createdAt": {
+                    "allowNull": false,
+                    "type": Sequelize.DATE
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "type": Sequelize.DATE
+                }
+            },
+            {}
+        ]
+    },
+
+    {
+        fn: "createTable",
+        params: [
+            "users",
+            {
+                "id": {
+                    "autoIncrement": true,
+                    "primaryKey": true,
+                    "type": Sequelize.INTEGER
+                },
+                "organizationId": {
+                    "onDelete": "CASCADE",
+                    "onUpdate": "CASCADE",
+                    "references": {
+                        "model": "organizations",
+                        "key": "id"
+                    },
+                    "allowNull": false,
+                    "type": Sequelize.INTEGER
+                },
+                "email": {
+                    "allowNull": false,
+                    "type": Sequelize.STRING(255)
+                },
+                "nickname": {
+                    "comment": "display name",
+                    "type": Sequelize.STRING
+                },
+                "isActive": {
+                    "defaultValue": false,
+                    "type": Sequelize.BOOLEAN
+                },
+                "loginCount": {
+                    "defaultValue": 0,
+                    "type": Sequelize.INTEGER
+                },
+                "role": {
+                    "defaultValue": "member",
+                    "type": Sequelize.STRING(20)
+                },
+                "joinedAt": {
+                    "defaultValue": Sequelize.NOW,
+                    "type": Sequelize.DATE
+                },
+                "plan": {
+                    "type": Sequelize.ENUM('free', 'pro', 'enterprise')
+                },
+                "balance": {
+                    "type": Sequelize.DECIMAL(10, 2)
+                },
+                "bio": {
+                    "type": Sequelize.TEXT
+                },
+                "externalId": {
+                    "type": Sequelize.BIGINT
+                },
+                "preferences": {
+                    "type": Sequelize.JSON
+                },
+                "score": {
+                    "type": Sequelize.DOUBLE
+                },
+                "createdAt": {
+                    "allowNull": false,
+                    "type": Sequelize.DATE
+                },
+                "updatedAt": {
+                    "allowNull": false,
+                    "type": Sequelize.DATE
+                }
+            },
+            {}
+        ]
+    },
+    {
+        fn: "addIndex",
+        params: [
+            "organizations",
+            ["slug"],
+            {
+                "indexName": "idx_org_slug",
+                "indicesType": "UNIQUE"
+            }
+        ]
+    },
+    {
+        fn: "addIndex",
+        params: [
+            "users",
+            ["email"],
+            {
+                "indexName": "idx_users_email",
+                "indicesType": "UNIQUE"
+            }
+        ]
+    },
+    {
+        fn: "addIndex",
+        params: [
+            "users",
+            ["nickname"],
+            {
+                "indexName": "users_nickname"
+            }
+        ]
+    }
+];
+
+const rollbackCommands = [{
+        fn: "dropTable",
+        params: ["users"]
+    },
+    {
+        fn: "dropTable",
+        params: ["organizations"]
+    }
+];
+
+async function runCommands(queryInterface, commands) {
+    for (let index = 0; index < commands.length; index++) {
+        const command = commands[index];
+        if (typeof queryInterface[command.fn] !== "function") {
+            throw new Error(
+                "[#" + index + "] unknown queryInterface method: " + command.fn
+            );
+        }
+        console.log("[#" + index + "] execute: " + command.fn);
+        await queryInterface[command.fn].apply(queryInterface, command.params);
+    }
+}
+
+module.exports = {
+    up: function(queryInterface, Sequelize) {
+        return runCommands(queryInterface, migrationCommands);
+    },
+    down: function(queryInterface, Sequelize) {
+        return runCommands(queryInterface, rollbackCommands);
+    },
+    info: info
+};
+"
+`;
+
+exports[`golden: models to migration file initial migration (empty database) 사람이 읽는 액션 요약을 만든다 1`] = `
+[
+  "createTable "organizations", deps: []",
+  "createTable "users", deps: [organizations]",
+  "addIndex "idx_org_slug" to table "organizations"",
+  "addIndex "idx_users_email" to table "users"",
+  "addIndex "users_nickname" to table "users"",
+]
+`;
+
+exports[`golden: models to migration file initial migration (empty database) 전체 스키마에 대한 down 커맨드를 만든다 1`] = `
+[
+  "{ fn: "dropTable", params: ["users"] }",
+  "{ fn: "dropTable", params: ["organizations"] }",
+]
+`;
+
+exports[`golden: models to migration file initial migration (empty database) 전체 스키마에 대한 up 커맨드를 만든다 1`] = `
+[
+  "
+{ fn: "createTable", params: [
+"organizations",
+ { 
+      "id": { "autoIncrement":true, "primaryKey":true, "type": Sequelize.INTEGER }, 
+      "name": { "unique":true, "allowNull":false, "type": Sequelize.STRING(100) }, 
+      "slug": { "allowNull":false, "type": Sequelize.STRING(50) }, 
+      "createdAt": { "allowNull":false, "type": Sequelize.DATE }, 
+      "updatedAt": { "allowNull":false, "type": Sequelize.DATE }
+     },
+{}
+] }",
+  "
+{ fn: "createTable", params: [
+"users",
+ { 
+      "id": { "autoIncrement":true, "primaryKey":true, "type": Sequelize.INTEGER }, 
+      "organizationId": { "onDelete":"CASCADE", "onUpdate":"CASCADE", "references":{"model":"organizations","key":"id"}, "allowNull":false, "type": Sequelize.INTEGER }, 
+      "email": { "allowNull":false, "type": Sequelize.STRING(255) }, 
+      "nickname": { "comment":"display name", "type": Sequelize.STRING }, 
+      "isActive": { "defaultValue":false, "type": Sequelize.BOOLEAN }, 
+      "loginCount": { "defaultValue":0, "type": Sequelize.INTEGER }, 
+      "role": { "defaultValue":"member", "type": Sequelize.STRING(20) }, 
+      "joinedAt": { "defaultValue": Sequelize.NOW, "type": Sequelize.DATE }, 
+      "plan": { "type": Sequelize.ENUM('free', 'pro', 'enterprise') }, 
+      "balance": { "type": Sequelize.DECIMAL(10,2) }, 
+      "bio": { "type": Sequelize.TEXT }, 
+      "externalId": { "type": Sequelize.BIGINT }, 
+      "preferences": { "type": Sequelize.JSON }, 
+      "score": { "type": Sequelize.DOUBLE }, 
+      "createdAt": { "allowNull":false, "type": Sequelize.DATE }, 
+      "updatedAt": { "allowNull":false, "type": Sequelize.DATE }
+     },
+{}
+] }",
+  "{ fn: "addIndex", params: [
+    "organizations",
+    ["slug"],
+    {"indexName":"idx_org_slug","indicesType":"UNIQUE"}
+] }",
+  "{ fn: "addIndex", params: [
+    "users",
+    ["email"],
+    {"indexName":"idx_users_email","indicesType":"UNIQUE"}
+] }",
+  "{ fn: "addIndex", params: [
+    "users",
+    ["nickname"],
+    {"indexName":"users_nickname"}
+] }",
+]
+`;
+
+exports[`golden: models to migration file table snapshot itself 모델에서 뽑아낸 테이블 스냅샷을 고정한다 1`] = `
+{
+  "organizations": {
+    "indexes": {
+      "4154fa2ebc29f4f4d2d5b7189cd6a2e88fdf2db2": {
+        "fields": [
+          "slug",
+        ],
+        "name": "idx_org_slug",
+        "options": {
+          "indexName": "idx_org_slug",
+          "indicesType": "UNIQUE",
+        },
+        "type": "",
+        "unique": true,
+      },
+    },
+    "schema": {
+      "createdAt": {
+        "allowNull": false,
+        "seqType": "Sequelize.DATE",
+      },
+      "id": {
+        "autoIncrement": true,
+        "primaryKey": true,
+        "seqType": "Sequelize.INTEGER",
+      },
+      "name": {
+        "allowNull": false,
+        "seqType": "Sequelize.STRING(100)",
+        "unique": true,
+      },
+      "slug": {
+        "allowNull": false,
+        "seqType": "Sequelize.STRING(50)",
+      },
+      "updatedAt": {
+        "allowNull": false,
+        "seqType": "Sequelize.DATE",
+      },
+    },
+    "tableName": "organizations",
+  },
+  "users": {
+    "indexes": {
+      "b1426c46d17915ed5a90a3a52eee963b16c0aa99": {
+        "fields": [
+          "nickname",
+        ],
+        "name": "users_nickname",
+        "options": {
+          "indexName": "users_nickname",
+        },
+        "type": "",
+      },
+      "e81436b77ea9de93ba32d67a1c0d561f5a3a42ae": {
+        "fields": [
+          "email",
+        ],
+        "name": "idx_users_email",
+        "options": {
+          "indexName": "idx_users_email",
+          "indicesType": "UNIQUE",
+        },
+        "type": "",
+        "unique": true,
+      },
+    },
+    "schema": {
+      "balance": {
+        "seqType": "Sequelize.DECIMAL(10,2)",
+      },
+      "bio": {
+        "seqType": "Sequelize.TEXT",
+      },
+      "createdAt": {
+        "allowNull": false,
+        "seqType": "Sequelize.DATE",
+      },
+      "email": {
+        "allowNull": false,
+        "seqType": "Sequelize.STRING(255)",
+      },
+      "externalId": {
+        "seqType": "Sequelize.BIGINT",
+      },
+      "id": {
+        "autoIncrement": true,
+        "primaryKey": true,
+        "seqType": "Sequelize.INTEGER",
+      },
+      "isActive": {
+        "defaultValue": {
+          "value": false,
+        },
+        "seqType": "Sequelize.BOOLEAN",
+      },
+      "joinedAt": {
+        "defaultValue": {
+          "internal": true,
+          "value": "Sequelize.NOW",
+        },
+        "seqType": "Sequelize.DATE",
+      },
+      "loginCount": {
+        "defaultValue": {
+          "value": 0,
+        },
+        "seqType": "Sequelize.INTEGER",
+      },
+      "nickname": {
+        "comment": "display name",
+        "seqType": "Sequelize.STRING",
+      },
+      "organizationId": {
+        "allowNull": false,
+        "onDelete": "CASCADE",
+        "onUpdate": "CASCADE",
+        "references": {
+          "key": "id",
+          "model": "organizations",
+        },
+        "seqType": "Sequelize.INTEGER",
+      },
+      "plan": {
+        "seqType": "Sequelize.ENUM('free', 'pro', 'enterprise')",
+      },
+      "preferences": {
+        "seqType": "Sequelize.JSON",
+      },
+      "role": {
+        "defaultValue": {
+          "value": "member",
+        },
+        "seqType": "Sequelize.STRING(20)",
+      },
+      "score": {
+        "seqType": "Sequelize.DOUBLE",
+      },
+      "updatedAt": {
+        "allowNull": false,
+        "seqType": "Sequelize.DATE",
+      },
+    },
+    "tableName": "users",
+  },
+}
+`;
