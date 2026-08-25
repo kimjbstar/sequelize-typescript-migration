@@ -17,8 +17,12 @@ trap 'rm -rf "$work_dir"' EXIT
 echo "==> Building and packing"
 cd "$repo_root"
 npm run build >/dev/null
-tarball="$(npm pack --silent)"
-mv "$tarball" "$work_dir/package.tgz"
+# Pack straight into the work directory rather than reading the filename off stdout.
+# `npm pack` runs the prepare script, and husky writes "HUSKY=0 skip install" there
+# without a trailing newline when HUSKY is set -- as it is in CI -- which corrupts the
+# filename. Writing to an empty directory sidesteps the parsing entirely.
+npm pack --silent --pack-destination "$work_dir" >/dev/null
+mv "$work_dir"/*.tgz "$work_dir/package.tgz"
 
 echo "==> Installing into a clean project"
 cd "$work_dir"
