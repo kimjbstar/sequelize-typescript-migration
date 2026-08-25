@@ -92,5 +92,8 @@
       "eslint --fix"
     ]
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "bin": {
+    "sequelize-typescript-migration": "dist/cli.js"
+  }
 }

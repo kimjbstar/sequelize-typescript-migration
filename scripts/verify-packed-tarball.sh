@@ -114,6 +114,60 @@ main().catch((err) => {
 JS
 node smoke.js
 
+echo "==> Running the CLI the way a consumer would"
+mkdir -p cli-migrations
+cat > db.js <<'JS'
+require('reflect-metadata')
+const {
+	Sequelize,
+	Model,
+	Table,
+	Column,
+	PrimaryKey,
+	DataType,
+} = require('sequelize-typescript')
+
+class Gadget extends Model {}
+Table({ tableName: 'gadgets', timestamps: false })(Gadget)
+Column(DataType.INTEGER)(Gadget.prototype, 'id')
+PrimaryKey(Gadget.prototype, 'id')
+Column(DataType.STRING(40))(Gadget.prototype, 'name')
+
+module.exports = new Sequelize({
+	dialect: 'sqlite',
+	storage: ':memory:',
+	logging: false,
+	models: [Gadget],
+})
+JS
+
+# npx resolves the bin from the installed package, which is what verifies both the
+# `bin` field and that npm marked dist/cli.js executable.
+npx sequelize-typescript-migration \
+	--config ./db.js \
+	--out-dir ./cli-migrations \
+	--name from-cli >/dev/null
+
+if [ ! -f cli-migrations/00000001-from_cli.js ]; then
+	echo "CLI did not write the expected migration file" >&2
+	ls -la cli-migrations >&2
+	exit 1
+fi
+echo "    CLI generated cli-migrations/00000001-from_cli.js"
+
+# --preview must not write anything.
+rm -rf cli-preview && mkdir -p cli-preview
+npx sequelize-typescript-migration \
+	--config ./db.js \
+	--out-dir ./cli-preview \
+	--preview >/dev/null
+
+if [ -n "$(ls -A cli-preview)" ]; then
+	echo "--preview wrote files when it should not have" >&2
+	exit 1
+fi
+echo "    --preview wrote nothing"
+
 echo "==> Checking the published type declarations resolve"
 node -e "
 const path = require('path')
