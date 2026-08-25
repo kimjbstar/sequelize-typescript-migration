@@ -143,10 +143,13 @@ export function loadSequelize(configPath: string): Sequelize {
 					`this tool does not bundle. Try:\n\n` +
 					`  node --import tsx ./node_modules/.bin/sequelize-typescript-migration ...\n\n` +
 					`Original error: ${message}`,
+				{ cause: err },
 			)
 		}
 
-		throw new Error(`Could not load ${resolved}: ${message}`)
+		throw new Error(`Could not load ${resolved}: ${message}`, {
+			cause: err,
+		})
 	}
 
 	const candidate = pickInstance(loaded)

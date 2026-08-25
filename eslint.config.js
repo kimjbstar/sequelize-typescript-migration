@@ -20,6 +20,11 @@ module.exports = tseslint.config(
 				'error',
 				{ argsIgnorePattern: '^_' },
 			],
+			// Stated explicitly rather than inherited. This rule moved into
+			// js.configs.recommended at some point and the local install and CI disagreed
+			// about whether it was on -- CI failed a lint that passed locally. Pinning it
+			// here means both see the same rule set.
+			'preserve-caught-error': 'error',
 		},
 	},
 )
